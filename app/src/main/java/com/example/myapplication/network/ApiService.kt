@@ -1,118 +1,44 @@
 package com.example.myapplication.network
 
-
-import retrofit2.Call
-
-
-
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import retrofit2.Response
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
+import retrofit2.http.Body
 import retrofit2.http.GET
-
 import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Part
-import retrofit2.http.Query
 
 interface ApiService {
 
-    // SEND OTP
-    @FormUrlEncoded
-    @POST("send_otp.php")
-    suspend fun sendOtp(
-        @Field("mobile") mobile: String
-    ): Response<SendOtpResponse>
+    @POST("auth/send-otp")
+    suspend fun sendOtp(@Body body: SendOtpRequest): Response<StatusResponse>
 
-    // VERIFY OTP FOR SIGNUP SCREEN (success = true)
-    @FormUrlEncoded
-    @POST("verify_otp.php")
-    suspend fun verifyOtp(
-        @Field("mobile") mobile: String,
-        @Field("otp") otp: String
-    ): Response<BasicResponse>
+    @POST("auth/verify-otp")
+    suspend fun verifyOtp(@Body body: VerifyOtpRequest): Response<StatusResponse>
 
-    // VERIFY OTP FOR FORGOT SCREEN (status = "success")
-    @FormUrlEncoded
-    @POST("verify_otp.php")
-    suspend fun verifyOtpForForgot(
-        @Field("mobile") mobile: String,
-        @Field("otp") otp: String
-    ): Response<OtpVerifyResponse>
+    @POST("auth/signup")
+    suspend fun signup(@Body body: SignupRequest): Response<StatusResponse>
 
-    // SIGNUP
-    @FormUrlEncoded
-    @POST("signup.php")
-    suspend fun signup(
-        @Field("fullname") fullname: String,
-        @Field("email") email: String,
-        @Field("mobile") mobile: String,
-        @Field("otp") otp: String,
-        @Field("password") password: String,
-        @Field("confirm") confirm: String
-    ): Response<BasicResponse>
+    @POST("auth/login")
+    suspend fun login(@Body body: LoginRequest): Response<AuthResponse>
 
-    // LOGIN
-    @FormUrlEncoded
-    @POST("login.php")
-    suspend fun login(
-        @Field("email") email: String,
-        @Field("password") password: String
-    ): Response<LoginResponse>
+    @POST("auth/refresh")
+    suspend fun refresh(@Body body: RefreshRequest): Response<AuthResponse>
 
-    // RESET PASSWORD
-    @FormUrlEncoded
-    @POST("reset_password.php")
-    suspend fun resetPassword(
-        @Field("mobile") mobile: String,
-        @Field("password") password: String
-    ): Response<BasicResponse>
+    @POST("auth/logout")
+    suspend fun logout(@Body body: LogoutRequest): Response<StatusResponse>
 
-    // Bydefault profile
-    @FormUrlEncoded
-    @POST("get_profile.php")
-    suspend fun getProfile(
-        @Field("user_id") userId: String
-    ): ProfileResponse
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body body: ResetPasswordRequest): Response<StatusResponse>
 
-    // Update profile
-    @FormUrlEncoded
-    @POST("update_profile.php")
-    suspend fun updateProfile(
-        @Field("user_id") userId: String,
-        @Field("fullname") fullName: String,
-        @Field("username") userName: String,
-        @Field("email") email: String,
-        @Field("mobile") mobile: String,
-        @Field("address") address: String,
-        @Field("dob") dob: String,
-        @Field("gender") gender: String,
-        @Field("profile_image") profileImage: String   // ✅ ADD THIS
-    ): BasicResponse
+    @GET("users/me/profile")
+    suspend fun getMyProfile(): Response<UserProfileResponse>
+
+    @PUT("users/me/profile")
+    suspend fun updateMyProfile(@Body body: UpdateProfileRequest): Response<UserProfileResponse>
 
     @Multipart
-    @POST("upload_profile_image.php")
-    suspend fun uploadProfileImage(
-        @Part("user_id") userId: RequestBody,
-        @Part image: MultipartBody.Part
-    ): UploadResponse
-
-
-//--------------------------------------------------------------=-------------------
-
-
+    @POST("users/me/profile-photo")
+    suspend fun uploadProfilePhoto(@Part file: MultipartBody.Part): Response<ProfilePhotoResponse>
 }
-
-
-
-
-
-
-
-
-
-
-
-

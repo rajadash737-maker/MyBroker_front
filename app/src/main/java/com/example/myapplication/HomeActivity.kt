@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.navigation.compose.NavHost
 
 import androidx.navigation.compose.rememberNavController
-import com.example.myapplication.ui.theme.NavigationGraph
+import com.example.myapplication.ui.feature.NavigationGraph
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
