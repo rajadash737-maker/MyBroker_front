@@ -17,6 +17,7 @@ import com.example.myapplication.ui.feature.home.profile.EditProfileScreen
 import com.example.myapplication.ui.feature.home_pase.HomeScreen
 import com.example.myapplication.ui.feature.home_pase.components.ExploreScreen
 import com.example.myapplication.network.SessionManager
+import com.example.myapplication.ui.feature.sell_land.navigation.sellLandGraph
 
 
 fun NavGraphBuilder.NavigationGraph(navController: NavHostController) {
@@ -36,6 +37,10 @@ fun NavGraphBuilder.NavigationGraph(navController: NavHostController) {
     composable("home") {
         HomeScreen(navController)
     }
+
+    sellLandGraph(navController)
+
+
 
     composable("explore") {
         ExploreScreen(navController)
@@ -84,4 +89,7 @@ fun NavGraphBuilder.NavigationGraph(navController: NavHostController) {
     composable("edit_profile") {
         EditProfileScreen()
     }
+
+
+
 }

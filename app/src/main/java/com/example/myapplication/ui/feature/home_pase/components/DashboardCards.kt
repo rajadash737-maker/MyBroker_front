@@ -44,7 +44,7 @@ fun DashboardCards(navController: NavController) {
             iconRes = R.drawable.ic_money_equal,
             bgColor = Color(0xFF2E7D32)
         ) {
-            navController.navigate("sell_land")
+            navController.navigate("sell_land_graph")
         }
 
     }

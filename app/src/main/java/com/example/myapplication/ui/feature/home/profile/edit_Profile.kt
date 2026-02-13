@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,8 +69,10 @@ fun EditProfileScreen(
     var address by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("Male") }
-    var profileImageName by remember { mutableStateOf("") }
+//    var profileImageName by remember { mutableStateOf("") }
     var showDobPicker by remember { mutableStateOf(false) }
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
+
 
 
 
@@ -101,6 +102,7 @@ fun EditProfileScreen(
                 address = p.address ?: ""
                 dob = DateUtils.apiToUi(p.dateOfBirth)
                 gender = (p.gender ?: "male").replaceFirstChar { it.uppercase() }
+                profileImageUrl = p.profileImageUrl
             } else {
                 Toast.makeText(context, "Load failed: ${res.code()} ${err ?: ""}", Toast.LENGTH_LONG).show()
             }
@@ -118,9 +120,13 @@ fun EditProfileScreen(
             .padding(16.dp)
     ) {
 
-        ProfileImageSection { uploadedName ->
-            profileImageName = uploadedName   // ✅ STORE IT
-        }
+        ProfileImageSection(
+            initialImageUrl = profileImageUrl,
+            onImageUploaded = { uploadedName ->
+                profileImageUrl = uploadedName
+            }
+        )
+
 
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -226,6 +232,7 @@ fun EditProfileScreen(
 
 @Composable
 fun ProfileImageSection(
+    initialImageUrl: String?,
     onImageUploaded: (String) -> Unit
 ) {
 
@@ -235,11 +242,18 @@ fun ProfileImageSection(
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var serverImage by remember { mutableStateOf<String?>(null) }
 
-    // Load from backend shared preferences
-    LaunchedEffect(Unit) {
+    // Priority: fresh API image -> shared pref fallback
+    LaunchedEffect(initialImageUrl) {
         val prefs = context.getSharedPreferences("user", Context.MODE_PRIVATE)
-        serverImage = prefs.getString("PROFILE_IMAGE", null)
+        val cached = prefs.getString("PROFILE_IMAGE", null)
+
+        serverImage = when {
+            !initialImageUrl.isNullOrBlank() -> initialImageUrl
+            !cached.isNullOrBlank() -> cached
+            else -> null
+        }
     }
+
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()

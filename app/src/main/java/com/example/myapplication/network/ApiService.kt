@@ -1,6 +1,7 @@
 package com.example.myapplication.network
 
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -8,6 +9,21 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+import com.example.myapplication.ui.feature.sell_land.model.BoundaryRequest
+import com.example.myapplication.ui.feature.sell_land.model.DeleteMediaResponse
+import com.example.myapplication.ui.feature.sell_land.model.PaymentInitRequest
+import com.example.myapplication.ui.feature.sell_land.model.PaymentMarkPaidRequest
+import com.example.myapplication.ui.feature.sell_land.model.PaymentResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandDraftRequest
+import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
+import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
+
+
+
 
 interface ApiService {
 
@@ -41,4 +57,54 @@ interface ApiService {
     @Multipart
     @POST("users/me/profile-photo")
     suspend fun uploadProfilePhoto(@Part file: MultipartBody.Part): Response<ProfilePhotoResponse>
+    @POST("sell-land/draft")
+    suspend fun saveDraft(
+        @Query("request_id") requestId: Int? = null,
+        @Body body: SellLandDraftRequest
+    ): Response<SellLandResponse>
+
+    @PUT("sell-land/{id}/boundary")
+    suspend fun updateBoundary(
+        @Path("id") id: Int,
+        @Body body: BoundaryRequest
+    ): Response<SellLandResponse>
+
+    @Multipart
+    @POST("sell-land/{id}/photos")
+    suspend fun uploadPhoto(
+        @Path("id") id: Int,
+        @Part file: MultipartBody.Part
+    ): Response<SellLandMediaResponse>
+
+    @retrofit2.http.DELETE("sell-land/{id}/media/{media_id}")
+    suspend fun deleteListingMedia(
+        @Path("id") id: Int,
+        @Path("media_id") mediaId: Int
+    ): Response<DeleteMediaResponse>
+
+
+    @Multipart
+    @POST("sell-land/{id}/documents")
+    suspend fun uploadDocument(
+        @Path("id") id: Int,
+        @Part("document_type") documentType: RequestBody,
+        @Part file: MultipartBody.Part
+    ): Response<SellLandMediaResponse>
+
+    @POST("sell-land/payments/initiate")
+    suspend fun initiatePayment(@Body body: PaymentInitRequest): Response<PaymentResponse>
+
+    @POST("sell-land/payments/mark-paid")
+    suspend fun markPaid(@Body body: PaymentMarkPaidRequest): Response<PaymentResponse>
+
+    @POST("sell-land/{id}/submit")
+    suspend fun submit(@Path("id") id: Int): Response<SubmitResponse>
+
+    @GET("sell-land/{id}/media")
+    suspend fun getListingMedia(@Path("id") id: Int): Response<List<SellLandMediaResponse>>
+
+    @GET("sell-land/me")
+    suspend fun getMyListings(): Response<List<SellLandResponse>>
+
+
 }

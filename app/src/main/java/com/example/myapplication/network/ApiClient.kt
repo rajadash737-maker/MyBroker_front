@@ -9,10 +9,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 
+
+
 object ApiClient {
 
 
-    private const val BASE_URL = "http://10.181.27.22:8001/"
+    private const val BASE_URL = "http://10.181.27.22:8000/"
 
 
 
@@ -26,10 +28,11 @@ object ApiClient {
             return _apiService
         }
 
-
     fun absoluteUrl(path: String?): String? {
         if (path.isNullOrBlank()) return null
-        return if (path.startsWith("http")) path else BASE_URL.removeSuffix("/") + path
+        if (path.startsWith("http")) return path
+        val normalized = if (path.startsWith("/")) path else "/$path"
+        return BASE_URL.removeSuffix("/") + normalized
     }
 
 
