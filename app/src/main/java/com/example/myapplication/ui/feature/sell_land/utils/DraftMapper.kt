@@ -1,15 +1,9 @@
 package com.example.myapplication.ui.feature.sell_land.utils
 
-
-
 import com.example.myapplication.ui.feature.sell_land.model.*
+import com.google.android.gms.maps.model.LatLng
+import org.json.JSONArray
 
-/**
- * DraftMapper
- * ------------------------------------
- * UI Draft <-> Persistence / Backend mapping
- * Industry standard utility
- */
 object DraftMapper {
 
     fun emptyDraft(): SellLandDraft {
@@ -21,7 +15,6 @@ object DraftMapper {
             polygon = emptyList(),
             pricing = null,
             lastStep = SellLandStep.SELLER
-
         )
     }
 
@@ -50,4 +43,64 @@ object DraftMapper {
         }
     }
 
+    fun fromExistingListing(
+        res: SellLandResponse,
+        media: List<SellLandMediaResponse>
+    ): SellLandDraft {
+        val photos = media
+            .filter { it.mediaType == "photo" }
+            .map { it.fileUrl }
+
+        val docs = LandDocuments(
+            saleDeed = media.firstOrNull { it.documentType == "sale_deed" }?.fileUrl,
+            khataCertificate = media.firstOrNull { it.documentType == "khata_patta" }?.fileUrl,
+            encumbrance = media.firstOrNull { it.documentType == "encumbrance_certificate" }?.fileUrl,
+            sellerIdentity = media.firstOrNull { it.documentType == "seller_identity_proof" }?.fileUrl
+        )
+
+        return SellLandDraft(
+            sellerDetails = SellerDetails(
+                name = res.ownerName.orEmpty(),
+                mobile = res.ownerMobile.orEmpty(),
+                sellerType = res.ownershipType
+            ),
+            landDetails = LandDetails(
+                title = res.title.orEmpty(),
+                landType = res.landType,
+                area = (res.area ?: 0.0).toString(),
+                areaUnit = res.areaUnit,
+                state = res.state.orEmpty(),
+                city = res.city.orEmpty(),
+                pincode = res.pincode.orEmpty()
+            ),
+            images = photos,
+            documents = docs,
+            polygon = parseBoundaryPoints(res.boundaryPoints),
+            pricing = PricingDetails(
+                priceType = res.priceType,
+                price = res.expectedPrice ?: 0.0,
+                negotiable = res.negotiable,
+                availability = res.availability
+            ),
+            lastStep = SellLandStep.REVIEW
+        )
+    }
+
+    private fun parseBoundaryPoints(boundaryJson: String?): List<LatLng> {
+        if (boundaryJson.isNullOrBlank()) return emptyList()
+
+        return try {
+            val arr = JSONArray(boundaryJson)
+            buildList {
+                for (i in 0 until arr.length()) {
+                    val p = arr.optJSONObject(i) ?: continue
+                    val lat = p.optDouble("lat", Double.NaN)
+                    val lng = p.optDouble("lng", Double.NaN)
+                    if (!lat.isNaN() && !lng.isNaN()) add(LatLng(lat, lng))
+                }
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 }

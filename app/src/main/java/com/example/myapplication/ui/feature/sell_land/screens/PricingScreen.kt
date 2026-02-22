@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.feature.sell_land.screens
 
-
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -21,17 +19,16 @@ fun PricingScreen(
 ) {
     val draft by viewModel.draft.collectAsState()
 
-    var priceType by remember {
-        mutableStateOf(draft.pricing?.priceType ?: "Total Price")
-    }
-    var price by remember {
-        mutableStateOf(draft.pricing?.price?.toString() ?: "")
-    }
-    var negotiable by remember {
-        mutableStateOf(draft.pricing?.negotiable ?: false)
-    }
-    var availability by remember {
-        mutableStateOf(draft.pricing?.availability ?: "Immediate")
+    var priceType by remember { mutableStateOf("Total Price") }
+    var price by remember { mutableStateOf("") }
+    var negotiable by remember { mutableStateOf(false) }
+    var availability by remember { mutableStateOf("Immediate") }
+
+    LaunchedEffect(draft.pricing) {
+        priceType = draft.pricing?.priceType ?: "Total Price"
+        price = draft.pricing?.price?.toString() ?: ""
+        negotiable = draft.pricing?.negotiable ?: false
+        availability = draft.pricing?.availability ?: "Immediate"
     }
 
     Scaffold(
@@ -50,11 +47,9 @@ fun PricingScreen(
                     )
                     viewModel.saveDraft(step = 5)
                 }
-
             )
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -62,19 +57,16 @@ fun PricingScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             Text(
                 text = "Price Details",
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // Price Type
             PriceTypeDropdown(
                 selected = priceType,
                 onSelected = { priceType = it }
             )
 
-            // Price Input
             OutlinedTextField(
                 value = price,
                 onValueChange = { price = it },
@@ -84,7 +76,6 @@ fun PricingScreen(
                 leadingIcon = { Text("₹") }
             )
 
-            // Negotiable
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -131,6 +122,7 @@ fun PricingScreen(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PriceTypeDropdown(
@@ -144,19 +136,15 @@ fun PriceTypeDropdown(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
-
         OutlinedTextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
             label = { Text("Price Type") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
-            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)  // safe for now
-
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
         )
 
         ExposedDropdownMenu(
@@ -175,7 +163,6 @@ fun PriceTypeDropdown(
         }
     }
 }
-
 
 @Composable
 fun AvailabilitySelector(
@@ -199,4 +186,3 @@ fun AvailabilitySelector(
         }
     }
 }
-

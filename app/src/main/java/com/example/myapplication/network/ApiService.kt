@@ -21,8 +21,7 @@ import com.example.myapplication.ui.feature.sell_land.model.SellLandDraftRequest
 import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
 import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
-
-
+import retrofit2.http.DELETE
 
 
 interface ApiService {
@@ -76,7 +75,7 @@ interface ApiService {
         @Part file: MultipartBody.Part
     ): Response<SellLandMediaResponse>
 
-    @retrofit2.http.DELETE("sell-land/{id}/media/{media_id}")
+    @DELETE("sell-land/{id}/media/{media_id}")
     suspend fun deleteListingMedia(
         @Path("id") id: Int,
         @Path("media_id") mediaId: Int
@@ -105,6 +104,13 @@ interface ApiService {
 
     @GET("sell-land/me")
     suspend fun getMyListings(): Response<List<SellLandResponse>>
+
+    @GET("sell-land/me/tracking")
+    suspend fun getMyListingsTracking(): Response<List<SellLandResponse>>
+
+    @GET("sell-land/{id}")
+    suspend fun getListingDetails(@Path("id") id: Int): Response<SellLandResponse>
+
 
 
 }

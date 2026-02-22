@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.runtime)
     implementation(libs.ui)
     implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.material3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -115,9 +116,12 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
 
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
 
 
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
 }

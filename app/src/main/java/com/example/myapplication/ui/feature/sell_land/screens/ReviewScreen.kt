@@ -1,6 +1,5 @@
+// ReviewScreen.kt
 package com.example.myapplication.ui.feature.sell_land.screens
-
-
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,9 +20,21 @@ fun ReviewScreen(
     onEditMap: () -> Unit,
     onEditPricing: () -> Unit,
     onProceedPayment: () -> Unit,
+    onSubmitSuccess: () -> Unit,
     onBack: () -> Unit
 ) {
     val draft by viewModel.draft.collectAsState()
+    val paymentStatus by viewModel.currentPaymentStatus.collectAsState()
+    val loading by viewModel.loading.collectAsState()
+    val submitResult by viewModel.submitResult.collectAsState()
+
+    val alreadyPaid = paymentStatus.equals("success", ignoreCase = true)
+
+    LaunchedEffect(submitResult?.requestId) {
+        if (submitResult != null) {
+            onSubmitSuccess()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -31,11 +42,9 @@ fun ReviewScreen(
                 title = "Review Details",
                 onBack = onBack,
                 onSaveDraft = { viewModel.saveDraft(step = 6) }
-
             )
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -43,20 +52,13 @@ fun ReviewScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            ReviewSection(
-                title = "Seller Details",
-                onEdit = onEditSeller
-            ) {
+            ReviewSection(title = "Seller Details", onEdit = onEditSeller) {
                 Text(draft.sellerDetails?.name ?: "-")
                 Text(draft.sellerDetails?.mobile ?: "-")
                 Text(draft.sellerDetails?.sellerType ?: "-")
             }
 
-            ReviewSection(
-                title = "Land Details",
-                onEdit = onEditLand
-            ) {
+            ReviewSection(title = "Land Details", onEdit = onEditLand) {
                 Text(draft.landDetails?.title ?: "-")
                 Text(draft.landDetails?.landType ?: "-")
                 Text("${draft.landDetails?.area ?: "-"} ${draft.landDetails?.areaUnit ?: ""}")
@@ -64,10 +66,7 @@ fun ReviewScreen(
                 Text("Pincode: ${draft.landDetails?.pincode ?: "-"}")
             }
 
-            ReviewSection(
-                title = "Photos & Documents",
-                onEdit = onEditMedia
-            ) {
+            ReviewSection(title = "Photos & Documents", onEdit = onEditMedia) {
                 Text("Photos: ${draft.images.size}")
                 val docCount = listOf(
                     draft.documents.saleDeed,
@@ -75,22 +74,14 @@ fun ReviewScreen(
                     draft.documents.encumbrance,
                     draft.documents.sellerIdentity
                 ).count { it != null }
-
                 Text("Documents: $docCount")
-
             }
 
-            ReviewSection(
-                title = "Land Boundary",
-                onEdit = onEditMap
-            ) {
+            ReviewSection(title = "Land Boundary", onEdit = onEditMap) {
                 Text("Points marked: ${draft.polygon.size}")
             }
 
-            ReviewSection(
-                title = "Pricing",
-                onEdit = onEditPricing
-            ) {
+            ReviewSection(title = "Pricing", onEdit = onEditPricing) {
                 Text("Type: ${draft.pricing?.priceType ?: "-"}")
                 Text("Price: ₹${draft.pricing?.price ?: "-"}")
                 Text("Negotiable: ${if (draft.pricing?.negotiable == true) "Yes" else "No"}")
@@ -102,11 +93,22 @@ fun ReviewScreen(
             Button(
                 onClick = {
                     viewModel.saveDraft(step = 6)
-                    onProceedPayment()
+                    if (alreadyPaid) {
+                        viewModel.preSubmitCheck { viewModel.submitListing() }
+                    } else {
+                        onProceedPayment()
+                    }
                 },
+                enabled = !loading,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Proceed to Payment")
+                Text(
+                    when {
+                        loading -> "Please wait..."
+                        alreadyPaid -> "Submit Changes"
+                        else -> "Proceed to Payment"
+                    }
+                )
             }
         }
     }
@@ -129,16 +131,10 @@ fun ReviewSection(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                TextButton(onClick = onEdit) {
-                    Text("Edit")
-                }
+                Text(text = title, style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = onEdit) { Text("Edit") }
             }
             content()
         }
     }
 }
-

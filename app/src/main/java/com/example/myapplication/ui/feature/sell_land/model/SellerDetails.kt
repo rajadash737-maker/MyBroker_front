@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.feature.sell_land.model
 
+import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
 
 
 data class SellerDetails(
@@ -7,3 +8,4 @@ data class SellerDetails(
     val mobile: String,
     val sellerType: String
 )
+

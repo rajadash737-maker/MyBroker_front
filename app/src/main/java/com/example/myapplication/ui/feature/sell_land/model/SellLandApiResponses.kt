@@ -4,6 +4,8 @@ package com.example.myapplication.ui.feature.sell_land.model
 
 import com.google.gson.annotations.SerializedName
 
+
+
 data class SellLandResponse(
     @SerializedName("id") val id: Int,
     @SerializedName("user_id") val userId: Int,
@@ -30,9 +32,14 @@ data class SellLandResponse(
     @SerializedName("payment_required_amount") val paymentRequiredAmount: Double,
     @SerializedName("payment_status") val paymentStatus: String,
     @SerializedName("status") val status: String,
+    @SerializedName("rejection_reason") val rejectionReason: String? = null,
+    @SerializedName("field_officer_rejection_reason") val fieldOfficerRejectionReason: String? = null,
+    @SerializedName("tracking") val tracking: TrackingDto? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String
 )
+
+
 
 data class SellLandMediaResponse(
     @SerializedName("id") val id: Int,
@@ -66,4 +73,23 @@ data class SubmitResponse(
     @SerializedName("status") val status: String,
     @SerializedName("request_id") val requestId: Int,
     @SerializedName("listing_code") val listingCode: String
+)
+
+
+data class TrackingDto(
+    @SerializedName("stage") val stage: String,
+    @SerializedName("label") val label: String,
+    @SerializedName("needs_correction") val needsCorrection: Boolean,
+    @SerializedName("correction_by") val correctionBy: String? = null,
+    @SerializedName("correction_reason") val correctionReason: String? = null,
+    @SerializedName("progress") val progress: TrackingProgressDto
+)
+
+data class TrackingProgressDto(
+    @SerializedName("draft") val draft: Boolean,
+    @SerializedName("under_review") val underReview: Boolean,
+    @SerializedName("approved") val approved: Boolean,
+    @SerializedName("field_verified") val fieldVerified: Boolean,
+    @SerializedName("live") val live: Boolean,
+    @SerializedName("sold") val sold: Boolean
 )

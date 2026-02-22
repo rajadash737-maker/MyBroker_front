@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.network.ApiClient
 import com.example.myapplication.ui.feature.sell_land.model.SellerDetails
-
 import com.example.myapplication.ui.feature.sell_land.utils.DraftMapper
 import com.example.myapplication.ui.feature.sell_land.utils.SellLandValidator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,9 +22,15 @@ import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
 import android.content.ContentResolver
 import android.net.Uri
 import java.io.File
-import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandModel
+import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
+import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
+import com.example.myapplication.ui.feature.sell_land.model.toSellLandModel
 
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 
 class SellLandViewModel : ViewModel() {
@@ -49,6 +54,11 @@ class SellLandViewModel : ViewModel() {
 
     private val _submitResult = MutableStateFlow<SubmitResponse?>(null)
     val submitResult: StateFlow<SubmitResponse?> = _submitResult
+
+    // Add near other state flows (after _submitResult is fine)
+    private val _currentPaymentStatus = MutableStateFlow<String?>(null)
+    val currentPaymentStatus: StateFlow<String?> = _currentPaymentStatus
+
 
     // -------------------------------
     // SELLER DETAILS
@@ -120,36 +130,79 @@ class SellLandViewModel : ViewModel() {
     // -------------------------------
     // SAVE DRAFT (Manual)
     // -------------------------------
+
+
+    private fun normalizeOwnershipType(value: String?): String? = when (value?.trim()?.lowercase()) {
+        "owner" -> "owner"
+        "broker" -> "broker"
+        "power_of_attorney", "power of attorney", "power-of-attorney" -> "power_of_attorney"
+        "other" -> "other"
+        else -> null
+    }
+
+    private fun normalizeLandType(value: String?): String? = when (value?.trim()?.lowercase()) {
+        "residential" -> "residential"
+        "commercial" -> "commercial"
+        "agricultural" -> "agricultural"
+        "industrial" -> "industrial"
+        "other" -> "other"
+        else -> null
+    }
+
+    private fun normalizeAreaUnit(value: String?): String? = when (value?.trim()?.lowercase()) {
+        "sqft", "sq.ft", "sq ft" -> "sqft"
+        "sqm", "sq.m", "sq m" -> "sqm"
+        "acre" -> "acre"
+        "bigha" -> "bigha"
+        else -> null
+    }
+
+    private fun normalizePriceType(value: String?): String = when (value?.trim()?.lowercase()) {
+        "total price", "total_price" -> "total_price"
+        "price per unit", "price_per_unit", "price per sq.ft", "price per sqft" -> "price_per_unit"
+        else -> "total_price"
+    }
+
+    private fun normalizeAvailability(value: String?): String? = when (value?.trim()?.lowercase()) {
+        "immediate" -> "immediate"
+        "within 3 months", "within_3_months" -> "within_3_months"
+        else -> null
+    }
+
+
+
+
     fun saveDraft(step: Int) {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
             try {
                 val d = _draft.value
+
                 val body = SellLandDraftRequest(
-                    title = d.landDetails?.title,
-                    ownerName = d.sellerDetails?.name,
-                    ownerMobile = d.sellerDetails?.mobile,
-                    ownershipType = d.sellerDetails?.sellerType?.lowercase(),
-                    landType = d.landDetails?.landType?.lowercase(),
-                    area = d.landDetails?.area?.toString()?.toDoubleOrNull(),
-                    areaUnit = d.landDetails?.areaUnit?.lowercase(),
-                    state = d.landDetails?.state,
-                    city = d.landDetails?.city,
-                    pincode = d.landDetails?.pincode,
-                    expectedPrice = d.pricing?.price?.toString()?.toDoubleOrNull(),
+                    title = d.landDetails?.title?.trim(),
+                    ownerName = d.sellerDetails?.name?.trim(),
+                    ownerMobile = d.sellerDetails?.mobile?.trim(),
+                    ownershipType = normalizeOwnershipType(d.sellerDetails?.sellerType),
+                    landType = normalizeLandType(d.landDetails?.landType),
+                    area = d.landDetails?.area?.toDoubleOrNull(),
+                    areaUnit = normalizeAreaUnit(d.landDetails?.areaUnit),
+                    state = d.landDetails?.state?.trim(),
+                    city = d.landDetails?.city?.trim(),
+                    pincode = d.landDetails?.pincode?.trim(),
+                    expectedPrice = d.pricing?.price,
                     negotiable = d.pricing?.negotiable,
-                    availability = d.pricing?.availability?.lowercase()?.replace(" ", "_"),
-                    priceType = "total_price",
+                    availability = normalizeAvailability(d.pricing?.availability),
+                    priceType = normalizePriceType(d.pricing?.priceType),
                     draftStep = step
                 )
 
                 val res = ApiClient.apiService.saveDraft(_currentRequestId.value, body)
                 if (res.isSuccessful && res.body() != null) {
-                    val response = res.body()!!
-                    _currentRequestId.value = response.id
+                    _currentRequestId.value = res.body()!!.id
                 } else {
-                    _error.value = res.errorBody()?.string() ?: "Draft save failed"
+                    val raw = res.errorBody()?.string()
+                    _error.value = "Draft save failed (${res.code()}): ${raw ?: "Unknown error"}"
                 }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Network error"
@@ -382,9 +435,13 @@ class SellLandViewModel : ViewModel() {
     // -------------------------------
     // CLEAR DRAFT (After Success)
     // -------------------------------
+    // Replace clearDraft()
     fun clearDraft() {
         _draft.value = SellLandDraft()
+        _currentRequestId.value = null
+        _currentPaymentStatus.value = null
     }
+
 
     fun clearSubmitResult() {
         _submitResult.value = null
@@ -465,5 +522,80 @@ class SellLandViewModel : ViewModel() {
             _loading.value = false
         }
     }
+
+    fun updateStatus(newStatus: ListingStatus) {
+        _draft.update {
+            it.copy(status = newStatus)
+        }
+    }
+
+    private val _statusListings = MutableStateFlow<List<SellLandModel>>(emptyList())
+    val statusListings: StateFlow<List<SellLandModel>> = _statusListings
+
+    fun loadStatusListings() {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+
+            remote.getMyListingsTracking()
+                .onSuccess { apiList: List<SellLandResponse> ->
+                    _statusListings.value = apiList.map { response -> response.toSellLandModel() }
+                }
+                .onFailure { ex ->
+                    _error.value = ex.message ?: "Failed to load listings"
+                }
+
+            _loading.value = false
+        }
+    }
+    // EDIT LIST ===============
+    fun setCurrentRequestId(requestId: Int) {
+        _currentRequestId.value = requestId
+    }
+
+    // Replace loadListingForEdit()
+    fun loadListingForEdit(requestId: Int) {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+            _currentRequestId.value = requestId
+
+            val detailResult = remote.getListingDetails(requestId)
+            val mediaResult = remote.getListingMedia(requestId)
+
+            detailResult
+                .onSuccess { detail ->
+                    _currentPaymentStatus.value = detail.paymentStatus
+                    val media = mediaResult.getOrNull().orEmpty()
+                    _draft.value = DraftMapper.fromExistingListing(detail, media)
+                }
+                .onFailure { ex ->
+                    _error.value = ex.message ?: "Failed to load listing"
+                }
+
+            _loading.value = false
+        }
+    }
+
+    // Optional helper (useful in ReviewScreen)
+    fun isAlreadyPaid(): Boolean {
+        return _currentPaymentStatus.value.equals("success", ignoreCase = true)
+    }
+
+
+
+    // CANCEL BOTTON
+
+    // CANCEL BUTTON DEMO STATE
+
+
+    fun cancelListing(id: String) {
+        _statusListings.value = _statusListings.value.map { listing ->
+            if (listing.id == id)
+                listing.copy(status = ListingStatus.CANCELLED)
+            else listing
+        }
+    }
+
 
 }

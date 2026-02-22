@@ -1,21 +1,18 @@
 package com.example.myapplication.ui.feature.sell_land.screens
 
-
-
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.ui.feature.sell_land.components.SellLandTopBar
-import com.example.myapplication.ui.feature.sell_land.model.SellerDetails
-import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
-import androidx.compose.foundation.text.KeyboardOptions
 import com.example.myapplication.ui.feature.sell_land.components.DraftResumeDialog
+import com.example.myapplication.ui.feature.sell_land.components.SellLandTopBar
 import com.example.myapplication.ui.feature.sell_land.components.StepIndicator
 import com.example.myapplication.ui.feature.sell_land.model.SellLandStep
-
+import com.example.myapplication.ui.feature.sell_land.model.SellerDetails
+import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,10 +23,19 @@ fun SellerDetailsScreen(
 ) {
     val draft by viewModel.draft.collectAsState()
 
-    var name by remember { mutableStateOf(draft.sellerDetails?.name ?: "") }
-    var mobile by remember { mutableStateOf(draft.sellerDetails?.mobile ?: "") }
-    var sellerType by remember {
-        mutableStateOf(draft.sellerDetails?.sellerType ?: "Owner")
+    var name by remember { mutableStateOf("") }
+    var mobile by remember { mutableStateOf("") }
+    var sellerType by remember { mutableStateOf("Owner") }
+    var showDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(draft.sellerDetails) {
+        name = draft.sellerDetails?.name.orEmpty()
+        mobile = draft.sellerDetails?.mobile.orEmpty()
+        sellerType = draft.sellerDetails?.sellerType ?: "Owner"
+    }
+
+    LaunchedEffect(Unit) {
+        showDialog = !viewModel.isDraftEmpty()
     }
 
     Scaffold(
@@ -39,15 +45,17 @@ fun SellerDetailsScreen(
                 onBack = onBack,
                 onSaveDraft = {
                     viewModel.updateSellerDetails(
-                        SellerDetails(name = name, mobile = mobile, sellerType = sellerType)
+                        SellerDetails(
+                            name = name.trim(),
+                            mobile = mobile.trim(),
+                            sellerType = sellerType
+                        )
                     )
                     viewModel.saveDraft(step = 1)
                 }
-
             )
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -59,13 +67,11 @@ fun SellerDetailsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-
             Text(
                 text = "Seller Information",
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // Full Name
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -73,19 +79,14 @@ fun SellerDetailsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Mobile Number
             OutlinedTextField(
                 value = mobile,
                 onValueChange = { mobile = it },
                 label = { Text("Mobile Number") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone
-                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth()
             )
 
-
-            // Seller Type
             SellerTypeDropdown(
                 selected = sellerType,
                 onSelected = { sellerType = it }
@@ -97,8 +98,8 @@ fun SellerDetailsScreen(
                 onClick = {
                     viewModel.updateSellerDetails(
                         SellerDetails(
-                            name = name,
-                            mobile = mobile,
+                            name = name.trim(),
+                            mobile = mobile.trim(),
                             sellerType = sellerType
                         )
                     )
@@ -111,8 +112,6 @@ fun SellerDetailsScreen(
                 Text("Continue")
             }
         }
-        val isDraftEmpty = viewModel.isDraftEmpty()
-        var showDialog by remember { mutableStateOf(!isDraftEmpty) }
 
         if (showDialog) {
             DraftResumeDialog(
@@ -129,7 +128,6 @@ fun SellerDetailsScreen(
             )
         }
     }
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,15 +143,12 @@ fun SellerTypeDropdown(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
-
         OutlinedTextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
             label = { Text("Seller Type") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
-            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(
