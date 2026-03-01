@@ -1,19 +1,21 @@
 package com.example.myapplication.ui.feature.home_pase
 
-
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.navigation.NavController
+import com.example.myapplication.ui.feature.buyer.domain.repository.LandRepository
 import com.example.myapplication.ui.feature.home_pase.components.HomeBottomBar
+import com.example.myapplication.ui.feature.home_pase.components.HomeContent
 import com.example.myapplication.ui.feature.home_pase.components.HomeTopBar
 import com.example.myapplication.ui.feature.home_pase.components.LandTypeDialog
-import com.example.myapplication.ui.feature.home_pase.components.*
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
-
+fun HomeScreen(
+    navController: NavController,
+    landRepository: LandRepository // NEW
+) {
     var selectedItem by remember { mutableStateOf("Home") }
     var showLandDialog by remember { mutableStateOf(false) }
 
@@ -21,6 +23,7 @@ fun HomeScreen(navController: NavController) {
         topBar = {
             HomeTopBar(
                 onNotificationClick = { navController.navigate("notifications") },
+                onLikeClick = { navController.navigate("wishlist") },
                 onProfileClick = { navController.navigate("profile") },
                 onLandClick = { showLandDialog = true }
             )
@@ -33,10 +36,10 @@ fun HomeScreen(navController: NavController) {
             )
         }
     ) { padding ->
-
         HomeContent(
             padding = padding,
-            navController = navController
+            navController = navController,
+            landRepository = landRepository // NEW
         )
 
         if (showLandDialog) {
@@ -54,5 +57,3 @@ fun HomeScreen(navController: NavController) {
         }
     }
 }
-
-

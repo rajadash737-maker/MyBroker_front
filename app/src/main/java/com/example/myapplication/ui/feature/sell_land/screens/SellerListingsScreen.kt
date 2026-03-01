@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplication.ui.feature.sell_land.navigation.SellLandRoutes
+import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
 import com.example.myapplication.ui.feature.sell_land.status.components.ListingCard
 import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
 
@@ -82,13 +83,18 @@ fun SellerListingsScreen(
                         onViewOffers = { navController.navigate("offers/${listing.id}") },
                         onEdit = {
                             if (listing.id.isNotBlank()) {
-                                navController.navigate(
-                                    SellLandRoutes.sellerWithIdRoute(listing.id)
-                                )
+                                navController.navigate(SellLandRoutes.sellerWithIdRoute(listing.id))
                             }
                         },
                         onCancel = {
-                            navController.navigate("cancel_reason/${listing.id}")
+                            val canNavigateToCancel = listing.status !in setOf(
+                                ListingStatus.SOLD,
+                                ListingStatus.PROCESSING_REFUND,
+                                ListingStatus.REFUND_SUCCESSFUL
+                            )
+                            if (canNavigateToCancel) {
+                                navController.navigate("cancel_reason/${listing.id}")
+                            }
                         }
                     )
                 }

@@ -72,6 +72,11 @@ dependencies {
     implementation(libs.ui)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.ui.ui)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.runtime)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -92,6 +97,10 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:6.4.3")
     implementation("com.google.android.gms:play-services-maps:19.0.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    implementation("com.google.maps.android:maps-compose:2.11.4")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 
 
         implementation("androidx.core:core-ktx:1.15.0")
@@ -123,5 +132,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    implementation("androidx.compose.foundation:foundation")
+
+
 
 }

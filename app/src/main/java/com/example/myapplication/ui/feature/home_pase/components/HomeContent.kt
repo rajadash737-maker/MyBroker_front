@@ -1,9 +1,9 @@
 package com.example.myapplication.ui.feature.home_pase.components
 
-
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,28 +15,47 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplication.network.ApiClient
-
+import com.example.myapplication.ui.feature.buyer.domain.repository.LandRepository
 
 @Composable
 fun HomeContent(
     padding: PaddingValues,
-    navController: NavController
+    navController: NavController,
+    landRepository: LandRepository // NEW
 ) {
-
     val context = LocalContext.current
     val api = remember(context) {
         ApiClient.init(context.applicationContext)
         ApiClient.apiService
     }
+
     var userName by remember { mutableStateOf("User") }
+    var nearbyLands by remember { mutableStateOf<List<HomeLandItem>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         try {
-            val res = api.getMyProfile()
-            if (res.isSuccessful) {
-                userName = res.body()?.fullname ?: "User"
+            val profileRes = api.getMyProfile()
+            if (profileRes.isSuccessful) {
+                userName = profileRes.body()?.fullname ?: "User"
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
+
+        try {
+            val lands = landRepository.getNearbyLands(skip = 0, limit = 10, sort = "latest")
+            nearbyLands = lands.map { land ->
+                HomeLandItem(
+                    id = land.id,
+                    imageUrl = land.coverImageUrl,
+                    price = land.formattedPrice,
+                    area = land.formattedArea,
+                    district = land.districtOrCity,
+                    state = land.stateText
+                )
+            }
+        } catch (_: Exception) {
+            nearbyLands = emptyList()
+        }
     }
 
     LazyColumn(
@@ -46,10 +65,15 @@ fun HomeContent(
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         item { WelcomeSection(userName = userName) }
-
-        item {MyBrokerSearchBar()}
+        item { MyBrokerSearchBar() }
         item { BannerSlider() }
         item { DashboardCards(navController) }
-        item { PropertyList() }
+        item {
+            PropertyList(
+                lands = nearbyLands,
+                onViewMoreClick = { navController.navigate("explore") },
+                onCardClick = { landId -> navController.navigate("land_detail/$landId") }
+            )
+        }
     }
 }

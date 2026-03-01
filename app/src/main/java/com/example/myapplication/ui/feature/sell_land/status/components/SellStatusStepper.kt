@@ -1,28 +1,29 @@
 package com.example.myapplication.ui.feature.sell_land.status.components
 
-
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
-
 import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
 
-import androidx.compose.foundation.layout.*
-
-import androidx.compose.material3.*
-
-import androidx.compose.ui.Alignment
-
 @Composable
-fun SellStatusStepper(status: ListingStatus) {
+fun SellStatusStepper(
+    status: ListingStatus,
+    statusBeforeCancellation: ListingStatus? = null
+) {
     val steps = listOf(
         ListingStatus.DRAFT,
         ListingStatus.UNDER_REVIEW,
@@ -32,10 +33,15 @@ fun SellStatusStepper(status: ListingStatus) {
         ListingStatus.SOLD
     )
 
-    val currentIndex = when (status) {
-        ListingStatus.NEEDS_CORRECTION -> 1 // correction usually after review
-        else -> steps.indexOf(status).coerceAtLeast(0)
+    val effectiveStatus = when (status) {
+        ListingStatus.PROCESSING_REFUND, ListingStatus.REFUND_SUCCESSFUL ->
+            statusBeforeCancellation ?: ListingStatus.LIVE
+        ListingStatus.NEEDS_CORRECTION ->
+            ListingStatus.UNDER_REVIEW
+        else -> status
     }
+
+    val currentIndex = steps.indexOf(effectiveStatus).coerceAtLeast(0)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -56,7 +62,11 @@ fun SellStatusStepper(status: ListingStatus) {
                         .background(circleColor, CircleShape)
                 ) {
                     if (isCompleted) {
-                        Text("✓", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = "✓",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
 
@@ -69,5 +79,18 @@ fun SellStatusStepper(status: ListingStatus) {
                 )
             }
         }
+    }
+
+    if (status == ListingStatus.PROCESSING_REFUND || status == ListingStatus.REFUND_SUCCESSFUL) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (status == ListingStatus.PROCESSING_REFUND) {
+                "REFUND: PROCESSING"
+            } else {
+                "REFUND: SUCCESSFUL"
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = if (status == ListingStatus.PROCESSING_REFUND) Color(0xFFE65100) else Color(0xFF2E7D32)
+        )
     }
 }

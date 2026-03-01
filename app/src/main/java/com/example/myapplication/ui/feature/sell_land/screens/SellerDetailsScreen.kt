@@ -14,6 +14,38 @@ import com.example.myapplication.ui.feature.sell_land.model.SellLandStep
 import com.example.myapplication.ui.feature.sell_land.model.SellerDetails
 import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
 
+private data class SellerTypeOption(
+    val label: String,
+    val value: String
+)
+
+private val sellerTypeOptions = listOf(
+    SellerTypeOption("Single Owner", "single_owner"),
+    SellerTypeOption("Multi Owner", "multi_owner"),
+    SellerTypeOption("Inherited Land", "inherited_land")
+)
+
+private fun sellerTypeLabel(value: String): String {
+    return sellerTypeOptions.firstOrNull { it.value == value }?.label ?: "Single Owner"
+}
+
+private fun normalizeSellerType(raw: String?): String {
+    return when (raw?.trim()?.lowercase()) {
+        "single_owner" -> "single_owner"
+        "multi_owner" -> "multi_owner"
+        "inherited_land" -> "inherited_land"
+
+        // legacy/app old values fallback
+        "owner" -> "single_owner"
+        "broker" -> "multi_owner"
+        "power_of_attorney" -> "inherited_land"
+        "power of attorney" -> "inherited_land"
+        "other" -> "single_owner"
+
+        else -> "single_owner"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDetailsScreen(
@@ -25,13 +57,13 @@ fun SellerDetailsScreen(
 
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
-    var sellerType by remember { mutableStateOf("Owner") }
+    var sellerType by remember { mutableStateOf("single_owner") }
     var showDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(draft.sellerDetails) {
         name = draft.sellerDetails?.name.orEmpty()
         mobile = draft.sellerDetails?.mobile.orEmpty()
-        sellerType = draft.sellerDetails?.sellerType ?: "Owner"
+        sellerType = normalizeSellerType(draft.sellerDetails?.sellerType)
     }
 
     LaunchedEffect(Unit) {
@@ -88,7 +120,7 @@ fun SellerDetailsScreen(
             )
 
             SellerTypeDropdown(
-                selected = sellerType,
+                selectedValue = sellerType,
                 onSelected = { sellerType = it }
             )
 
@@ -115,16 +147,12 @@ fun SellerDetailsScreen(
 
         if (showDialog) {
             DraftResumeDialog(
-                onResume = {
-                    showDialog = false
-                },
+                onResume = { showDialog = false },
                 onStartNew = {
                     viewModel.clearDraft()
                     showDialog = false
                 },
-                onDismiss = {
-                    showDialog = false
-                }
+                onDismiss = { showDialog = false }
             )
         }
     }
@@ -133,10 +161,9 @@ fun SellerDetailsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerTypeDropdown(
-    selected: String,
+    selectedValue: String,
     onSelected: (String) -> Unit
 ) {
-    val options = listOf("Owner", "Broker", "Power of Attorney", "Other")
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -144,7 +171,7 @@ fun SellerTypeDropdown(
         onExpandedChange = { expanded = !expanded }
     ) {
         OutlinedTextField(
-            value = selected,
+            value = sellerTypeLabel(selectedValue),
             onValueChange = {},
             readOnly = true,
             label = { Text("Seller Type") },
@@ -161,11 +188,11 @@ fun SellerTypeDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            options.forEach { item ->
+            sellerTypeOptions.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(item) },
+                    text = { Text(item.label) },
                     onClick = {
-                        onSelected(item)
+                        onSelected(item.value)
                         expanded = false
                     }
                 )

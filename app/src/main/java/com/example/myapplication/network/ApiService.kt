@@ -11,18 +11,23 @@ import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.DELETE
 
 import com.example.myapplication.ui.feature.sell_land.model.BoundaryRequest
+import com.example.myapplication.ui.feature.sell_land.model.CancelListingRequest
+import com.example.myapplication.ui.feature.sell_land.model.CancelListingResponse
+import com.example.myapplication.ui.feature.sell_land.model.CounterOfferRequest
 import com.example.myapplication.ui.feature.sell_land.model.DeleteMediaResponse
+import com.example.myapplication.ui.feature.sell_land.model.DocumentRequirementsResponse
 import com.example.myapplication.ui.feature.sell_land.model.PaymentInitRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentMarkPaidRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandDraftRequest
 import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellerOfferActionResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellerOfferListResponse
 import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
-import retrofit2.http.DELETE
-
 
 interface ApiService {
 
@@ -56,6 +61,7 @@ interface ApiService {
     @Multipart
     @POST("users/me/profile-photo")
     suspend fun uploadProfilePhoto(@Part file: MultipartBody.Part): Response<ProfilePhotoResponse>
+
     @POST("sell-land/draft")
     suspend fun saveDraft(
         @Query("request_id") requestId: Int? = null,
@@ -80,7 +86,6 @@ interface ApiService {
         @Path("id") id: Int,
         @Path("media_id") mediaId: Int
     ): Response<DeleteMediaResponse>
-
 
     @Multipart
     @POST("sell-land/{id}/documents")
@@ -111,6 +116,39 @@ interface ApiService {
     @GET("sell-land/{id}")
     suspend fun getListingDetails(@Path("id") id: Int): Response<SellLandResponse>
 
+    @POST("sell-land/{id}/cancel")
+    suspend fun cancelListing(
+        @Path("id") id: Int,
+        @Body body: CancelListingRequest
+    ): Response<CancelListingResponse>
 
+    // ---------------- SELLER OFFER ACTIONS ----------------
+
+    @GET("sell-land/{id}/offers")
+    suspend fun getListingOffers(@Path("id") id: Int): Response<SellerOfferListResponse>
+
+    @POST("sell-land/{id}/offers/{offer_id}/accept")
+    suspend fun acceptOffer(
+        @Path("id") id: Int,
+        @Path("offer_id") offerId: Int
+    ): Response<SellerOfferActionResponse>
+
+    @POST("sell-land/{id}/offers/{offer_id}/reject")
+    suspend fun rejectOffer(
+        @Path("id") id: Int,
+        @Path("offer_id") offerId: Int
+    ): Response<SellerOfferActionResponse>
+
+    @POST("sell-land/{id}/offers/{offer_id}/counter")
+    suspend fun counterOffer(
+        @Path("id") id: Int,
+        @Path("offer_id") offerId: Int,
+        @Body body: CounterOfferRequest
+    ): Response<SellerOfferActionResponse>
+
+    @GET("sell-land/document-requirements")
+    suspend fun getDocumentRequirements(
+        @Query("ownership_type") ownershipType: String? = null
+    ): Response<List<DocumentRequirementsResponse>>
 
 }

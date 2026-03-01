@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.feature.sell_land.model
 
-
-
 import com.google.gson.annotations.SerializedName
 
 data class SellLandDraftRequest(
@@ -43,3 +41,20 @@ data class PaymentMarkPaidRequest(
     @SerializedName("payment_id") val paymentId: Int,
     @SerializedName("provider_ref") val providerRef: String? = null
 )
+
+data class CancelListingRequest(
+    @SerializedName("reason") val reason: String,
+    @SerializedName("upi_id") val upiId: String,
+    @SerializedName("notes") val notes: String? = null
+)
+
+data class CounterOfferRequest(
+    @SerializedName("counter_amount") val counterAmount: Double
+)
+
+object OwnershipTypeApi {
+    const val SINGLE_OWNER = "single_owner"
+    const val MULTI_OWNER = "multi_owner"
+    const val INHERITED_LAND = "inherited_land"
+}
+

@@ -1,47 +1,38 @@
 package com.example.myapplication.ui.feature.sell_land.viewmodel
 
-
-
+import android.content.ContentResolver
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.network.ApiClient
+import com.example.myapplication.ui.feature.sell_land.model.LandDetails
+import com.example.myapplication.ui.feature.sell_land.model.OfferModel
+import com.example.myapplication.ui.feature.sell_land.model.PricingDetails
+import com.example.myapplication.ui.feature.sell_land.model.SellLandDraft
+import com.example.myapplication.ui.feature.sell_land.model.SellLandDraftRequest
+import com.example.myapplication.ui.feature.sell_land.model.SellLandModel
+import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandStep
 import com.example.myapplication.ui.feature.sell_land.model.SellerDetails
+import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
+import com.example.myapplication.ui.feature.sell_land.model.toSellLandModel
+import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
+import com.example.myapplication.ui.feature.sell_land.status.OfferStatus
 import com.example.myapplication.ui.feature.sell_land.utils.DraftMapper
 import com.example.myapplication.ui.feature.sell_land.utils.SellLandValidator
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.google.android.gms.maps.model.LatLng
-import com.example.myapplication.ui.feature.sell_land.model.SellLandDraft
-import com.example.myapplication.ui.feature.sell_land.model.SellLandDraftRequest
-import com.example.myapplication.ui.feature.sell_land.model.LandDetails
-import com.example.myapplication.ui.feature.sell_land.model.PricingDetails
-import com.example.myapplication.ui.feature.sell_land.model.SellLandStep
-import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
-import android.content.ContentResolver
-import android.net.Uri
 import java.io.File
-import com.example.myapplication.ui.feature.sell_land.model.SellLandModel
-import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
-import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
-import com.example.myapplication.ui.feature.sell_land.model.toSellLandModel
-
-
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-
 
 class SellLandViewModel : ViewModel() {
 
-    // 🔹 Single source of truth
     private val remote = SellLandRemote()
 
     private val _draft = MutableStateFlow(DraftMapper.emptyDraft())
-
     val draft: StateFlow<SellLandDraft> = _draft
-
 
     private val _currentRequestId = MutableStateFlow<Int?>(null)
     val currentRequestId: StateFlow<Int?> = _currentRequestId
@@ -55,90 +46,117 @@ class SellLandViewModel : ViewModel() {
     private val _submitResult = MutableStateFlow<SubmitResponse?>(null)
     val submitResult: StateFlow<SubmitResponse?> = _submitResult
 
-    // Add near other state flows (after _submitResult is fine)
     private val _currentPaymentStatus = MutableStateFlow<String?>(null)
     val currentPaymentStatus: StateFlow<String?> = _currentPaymentStatus
 
+    private val _statusListings = MutableStateFlow<List<SellLandModel>>(emptyList())
+    val statusListings: StateFlow<List<SellLandModel>> = _statusListings
 
-    // -------------------------------
-    // SELLER DETAILS
-    // -------------------------------
-    fun updateSellerDetails(details: SellerDetails) {
-        _draft.update {
-            it.copy(
-                sellerDetails = details,
-                lastStep = SellLandStep.SELLER
-            )
-        }
+    // ---------------- OFFERS ----------------
+    private val _sellerOffers = MutableStateFlow<List<OfferModel>>(emptyList())
+    val sellerOffers: StateFlow<List<OfferModel>> = _sellerOffers
+
+    private val _isOfferLocked = MutableStateFlow(false)
+    val isOfferLocked: StateFlow<Boolean> = _isOfferLocked
+
+    private val _offerLockExpiresAt = MutableStateFlow<String?>(null)
+    val offerLockExpiresAt: StateFlow<String?> = _offerLockExpiresAt
+
+    private val odishaCities = setOf(
+        "Angul", "Balangir", "Balasore", "Bargarh", "Bhadrak", "Boudh", "Cuttack",
+        "Deogarh", "Dhenkanal", "Gajapati", "Ganjam", "Jagatsinghpur", "Jajpur",
+        "Jharsuguda", "Kalahandi", "Kandhamal", "Kendrapara", "Kendujhar (Keonjhar)",
+        "Khordha", "Koraput", "Malkangiri", "Mayurbhanj", "Nabarangpur", "Nayagarh",
+        "Nuapada", "Puri", "Rayagada", "Sambalpur", "Subarnapur (Sonepur)", "Sundargarh"
+    )
+
+    private fun normalizeOdishaState(value: String?): String {
+        return if (value?.trim().equals("odisha", ignoreCase = true)) "Odisha" else value?.trim().orEmpty()
     }
 
-    // -------------------------------
-    // LAND DETAILS
-    // -------------------------------
+    private fun isValidOdishaLocation(state: String?, city: String?): Boolean {
+        val s = state?.trim().orEmpty()
+        val c = city?.trim().orEmpty()
+        return s.equals("Odisha", ignoreCase = true) && odishaCities.contains(c)
+    }
+
+
+    fun updateSellerDetails(details: SellerDetails) {
+        _draft.update { it.copy(sellerDetails = details, lastStep = SellLandStep.SELLER) }
+    }
+
+  
     fun updateLandDetails(details: LandDetails) {
         _draft.update {
             it.copy(
-                landDetails = details,
+                landDetails = details.copy(state = normalizeOdishaState(details.state)),
                 lastStep = SellLandStep.LAND
             )
         }
     }
 
-    // -------------------------------
-    // MEDIA
-    // -------------------------------
+
     fun updateImages(images: List<String>) {
-        _draft.update {
-            it.copy(
-                images = images,
-                lastStep = SellLandStep.MEDIA
-            )
-        }
+        _draft.update { it.copy(images = images, lastStep = SellLandStep.MEDIA) }
     }
 
-
-
-
-    // -------------------------------
-    // MAP BOUNDARY
-    // -------------------------------
     fun updatePolygon(points: List<LatLng>) {
         if (!SellLandValidator.isPolygonValid(points)) return
-
-        _draft.update {
-            it.copy(
-                polygon = points,
-                lastStep = SellLandStep.MAP
-            )
-        }
+        _draft.update { it.copy(polygon = points, lastStep = SellLandStep.MAP) }
     }
 
-    // -------------------------------
-    // PRICING
-    // -------------------------------
     fun updatePricing(pricing: PricingDetails) {
         if (!SellLandValidator.isPricingValid(pricing.price)) return
+        _draft.update { it.copy(pricing = pricing, lastStep = SellLandStep.PRICING) }
+    }
 
-        _draft.update {
-            it.copy(
-                pricing = pricing,
-                lastStep = SellLandStep.PRICING
+    private fun normalizeOwnershipType(value: String?): String = when (value?.trim()?.lowercase()) {
+        // new values
+        "single_owner" -> "single_owner"
+        "multi_owner" -> "multi_owner"
+        "inherited_land" -> "inherited_land"
+
+        // legacy fallback
+        "owner" -> "single_owner"
+        "broker" -> "multi_owner"
+        "power_of_attorney", "power of attorney", "power-of-attorney" -> "inherited_land"
+        "other" -> "single_owner"
+
+        else -> "single_owner"
+    }
+
+
+    private fun requiredDocsForSellerType(rawSellerType: String?): Set<String> {
+        return when (normalizeOwnershipType(rawSellerType)) {
+            "multi_owner" -> setOf(
+                "sale_deed",
+                "all_co_owner_aadhaar",
+                "joint_affidavit",
+                "encumbrance_certificate",
+                "latest_tax_receipt"
+            )
+
+            "inherited_land" -> setOf(
+                "original_sale_deed",
+                "death_certificate",
+                "legal_heir_certificate",
+                "all_heirs_aadhaar",
+                "consent_affidavit_all_heirs",
+                "encumbrance_certificate",
+                "latest_tax_receipt"
+            )
+
+            else -> setOf(
+                "sale_deed",
+                "khata_patta",
+                "encumbrance_certificate",
+                "latest_tax_receipt",
+                "aadhaar_pan"
             )
         }
     }
 
-    // -------------------------------
-    // SAVE DRAFT (Manual)
-    // -------------------------------
 
-
-    private fun normalizeOwnershipType(value: String?): String? = when (value?.trim()?.lowercase()) {
-        "owner" -> "owner"
-        "broker" -> "broker"
-        "power_of_attorney", "power of attorney", "power-of-attorney" -> "power_of_attorney"
-        "other" -> "other"
-        else -> null
-    }
 
     private fun normalizeLandType(value: String?): String? = when (value?.trim()?.lowercase()) {
         "residential" -> "residential"
@@ -169,16 +187,13 @@ class SellLandViewModel : ViewModel() {
         else -> null
     }
 
-
-
-
     fun saveDraft(step: Int) {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
             try {
                 val d = _draft.value
-
+                val normalizedState = normalizeOdishaState(d.landDetails?.state)
                 val body = SellLandDraftRequest(
                     title = d.landDetails?.title?.trim(),
                     ownerName = d.sellerDetails?.name?.trim(),
@@ -187,7 +202,7 @@ class SellLandViewModel : ViewModel() {
                     landType = normalizeLandType(d.landDetails?.landType),
                     area = d.landDetails?.area?.toDoubleOrNull(),
                     areaUnit = normalizeAreaUnit(d.landDetails?.areaUnit),
-                    state = d.landDetails?.state?.trim(),
+                    state = normalizedState,
                     city = d.landDetails?.city?.trim(),
                     pincode = d.landDetails?.pincode?.trim(),
                     expectedPrice = d.pricing?.price,
@@ -212,9 +227,14 @@ class SellLandViewModel : ViewModel() {
         }
     }
 
-    //
-    //
-    //API CALL
+    fun canMoveNext(): Boolean {
+        val d = _draft.value
+        val details = d.landDetails ?: return false
+        val basic = DraftMapper.canProceedToNextStep(d)
+        val pincodeOk = details.pincode?.trim()?.length == 6
+        return basic && pincodeOk && isValidOdishaLocation(details.state, details.city)
+    }
+
 
     fun saveBoundary() {
         val requestId = _currentRequestId.value ?: run {
@@ -231,8 +251,8 @@ class SellLandViewModel : ViewModel() {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = remote.saveBoundary(requestId, points)
-            result.onFailure { _error.value = it.message ?: "Boundary save failed" }
+            remote.saveBoundary(requestId, points)
+                .onFailure { _error.value = it.message ?: "Boundary save failed" }
             _loading.value = false
         }
     }
@@ -246,12 +266,11 @@ class SellLandViewModel : ViewModel() {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = remote.uploadPhoto(requestId, file)
-            result.onSuccess { media ->
-                _draft.update { it.copy(images = it.images + media.fileUrl, lastStep = SellLandStep.MEDIA) }
-            }.onFailure {
-                _error.value = it.message ?: "Photo upload failed"
-            }
+            remote.uploadPhoto(requestId, file)
+                .onSuccess { media ->
+                    _draft.update { it.copy(images = it.images + media.fileUrl, lastStep = SellLandStep.MEDIA) }
+                }
+                .onFailure { _error.value = it.message ?: "Photo upload failed" }
             _loading.value = false
         }
     }
@@ -277,9 +296,8 @@ class SellLandViewModel : ViewModel() {
             _loading.value = true
             _error.value = null
 
-            val mediaResult = remote.getListingMedia(requestId)
-            mediaResult
-                .onSuccess { mediaList: List<com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse> ->
+            remote.getListingMedia(requestId)
+                .onSuccess { mediaList ->
                     val target = mediaList.firstOrNull { media ->
                         media.fileUrl == imageUrl && media.mediaType == "photo"
                     }
@@ -290,26 +308,17 @@ class SellLandViewModel : ViewModel() {
                         remote.deleteListingMedia(requestId, target.id)
                             .onSuccess {
                                 _draft.update { d ->
-                                    d.copy(
-                                        images = d.images - imageUrl,
-                                        lastStep = SellLandStep.MEDIA
-                                    )
+                                    d.copy(images = d.images - imageUrl, lastStep = SellLandStep.MEDIA)
                                 }
                             }
-                            .onFailure { ex ->
-                                _error.value = ex.message ?: "Delete failed"
-                            }
+                            .onFailure { ex -> _error.value = ex.message ?: "Delete failed" }
                     }
                 }
-                .onFailure { ex ->
-                    _error.value = ex.message ?: "Media fetch failed"
-                }
+                .onFailure { ex -> _error.value = ex.message ?: "Media fetch failed" }
 
             _loading.value = false
         }
     }
-
-
 
     fun uploadDocument(documentType: String, file: File) {
         val requestId = _currentRequestId.value ?: run {
@@ -320,32 +329,24 @@ class SellLandViewModel : ViewModel() {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = remote.uploadDocument(requestId, documentType, file)
 
-            result.onSuccess { media ->
-                _draft.update { current ->
-
-                    val updatedDocs = when (documentType) {
-                        "sale_deed" -> current.documents.copy(saleDeed = media.fileUrl)
-                        "khata_patta" -> current.documents.copy(khataCertificate = media.fileUrl)
-                        "encumbrance_certificate" -> current.documents.copy(encumbrance = media.fileUrl)
-                        "seller_identity_proof" -> current.documents.copy(sellerIdentity = media.fileUrl)
-                        else -> current.documents
+            remote.uploadDocument(requestId, documentType, file)
+                .onSuccess { media ->
+                    _draft.update { current ->
+                        val updatedDocs = when (documentType) {
+                            "sale_deed" -> current.documents.copy(saleDeed = media.fileUrl)
+                            "khata_patta" -> current.documents.copy(khataCertificate = media.fileUrl)
+                            "encumbrance_certificate" -> current.documents.copy(encumbrance = media.fileUrl)
+                            "seller_identity_proof" -> current.documents.copy(sellerIdentity = media.fileUrl)
+                            else -> current.documents
+                        }
+                        current.copy(documents = updatedDocs, lastStep = SellLandStep.MEDIA)
                     }
-
-
-                    current.copy(
-                        documents = updatedDocs,
-                        lastStep = SellLandStep.MEDIA
-                    )
                 }
-            }.onFailure {
-                _error.value = it.message ?: "Document upload failed"
-            }
+                .onFailure { _error.value = it.message ?: "Document upload failed" }
 
             _loading.value = false
         }
-
     }
 
     fun uploadDocumentFromUri(
@@ -373,43 +374,29 @@ class SellLandViewModel : ViewModel() {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = remote.initiatePayment(requestId, method)
-            result.onSuccess { payment ->
-                onPaymentCreated(payment.id)
-            }.onFailure {
-                _error.value = it.message ?: "Payment initiation failed"
-            }
+            remote.initiatePayment(requestId, method)
+                .onSuccess { onPaymentCreated(it.id) }
+                .onFailure { _error.value = it.message ?: "Payment initiation failed" }
             _loading.value = false
         }
     }
 
-    fun markPaymentPaid(
-        paymentId: Int,
-        providerRef: String? = null,
-        onSuccess: () -> Unit = {}
-    ) {
+    fun markPaymentPaid(paymentId: Int, providerRef: String? = null, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = remote.markPaid(paymentId, providerRef)
-            result.onSuccess {
-                onSuccess()
-            }.onFailure {
-                _error.value = it.message ?: "Mark paid failed"
-            }
+            remote.markPaid(paymentId, providerRef)
+                .onSuccess { onSuccess() }
+                .onFailure { _error.value = it.message ?: "Mark paid failed" }
             _loading.value = false
         }
     }
 
     fun markPaidThenSubmit(paymentId: Int, providerRef: String? = null) {
         markPaymentPaid(paymentId, providerRef) {
-            preSubmitCheck {
-                submitListing()
-            }
+            preSubmitCheck { submitListing() }
         }
     }
-
-
 
     fun submitListing() {
         val requestId = _currentRequestId.value ?: run {
@@ -420,61 +407,40 @@ class SellLandViewModel : ViewModel() {
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = remote.submit(requestId)
-            result.onSuccess { submit ->
-                _submitResult.value = submit
-            }.onFailure {
-                _error.value = it.message ?: "Submit failed"
-            }
+            remote.submit(requestId)
+                .onSuccess { _submitResult.value = it }
+                .onFailure { _error.value = it.message ?: "Submit failed" }
             _loading.value = false
         }
     }
 
-
-
-    // -------------------------------
-    // CLEAR DRAFT (After Success)
-    // -------------------------------
-    // Replace clearDraft()
     fun clearDraft() {
         _draft.value = SellLandDraft()
         _currentRequestId.value = null
         _currentPaymentStatus.value = null
     }
 
-
     fun clearSubmitResult() {
         _submitResult.value = null
     }
 
-    fun isDraftEmpty(): Boolean {
-        return DraftMapper.isDraftEmpty(_draft.value)
-    }
+    fun isDraftEmpty(): Boolean = DraftMapper.isDraftEmpty(_draft.value)
 
-    fun canMoveNext(): Boolean {
-        return DraftMapper.canProceedToNextStep(_draft.value)
-    }
+
 
     private fun buildPreSubmitErrors(
         mediaList: List<com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse>
     ): List<String> {
         val errors = mutableListOf<String>()
 
-        val hasPhoto = mediaList.any { it.mediaType == "photo" }
-        if (!hasPhoto) errors.add("At least one land photo is required")
+        if (mediaList.none { it.mediaType == "photo" }) errors.add("At least one land photo is required")
 
         val uploadedDocs = mediaList
             .filter { it.mediaType == "document" }
             .mapNotNull { it.documentType }
             .toSet()
 
-        val requiredDocs = setOf(
-            "sale_deed",
-            "khata_patta",
-            "encumbrance_certificate",
-            "seller_identity_proof"
-        )
-
+        val requiredDocs = requiredDocsForSellerType(_draft.value.sellerDetails?.sellerType)
         val missingDocs = requiredDocs - uploadedDocs
         if (missingDocs.isNotEmpty()) {
             errors.add("Missing documents: ${missingDocs.joinToString()}")
@@ -488,13 +454,12 @@ class SellLandViewModel : ViewModel() {
         if (d.sellerDetails?.mobile.isNullOrBlank()) errors.add("Owner mobile is required")
         if (d.landDetails?.state.isNullOrBlank()) errors.add("State is required")
         if (d.landDetails?.city.isNullOrBlank()) errors.add("City is required")
+        if (!isValidOdishaLocation(d.landDetails?.state, d.landDetails?.city)) {
+            errors.add("Please select valid Odisha state and city from list")
+        }
         if (d.landDetails?.pincode.isNullOrBlank()) errors.add("Pincode is required")
-        val areaValue = "${d.landDetails?.area}".toDoubleOrNull() ?: 0.0
-        if (areaValue <= 0.0) errors.add("Area is required")
-
-        val priceValue = "${d.pricing?.price}".toDoubleOrNull() ?: 0.0
-        if (priceValue <= 0.0) errors.add("Expected price is required")
-
+        if ("${d.landDetails?.area}".toDoubleOrNull()?.let { it <= 0.0 } != false) errors.add("Area is required")
+        if ("${d.pricing?.price}".toDoubleOrNull()?.let { it <= 0.0 } != false) errors.add("Expected price is required")
 
         return errors
     }
@@ -512,25 +477,17 @@ class SellLandViewModel : ViewModel() {
             remote.getListingMedia(requestId)
                 .onSuccess { mediaList ->
                     val errors = buildPreSubmitErrors(mediaList)
-                    if (errors.isEmpty()) onValid()
-                    else _error.value = errors.joinToString("\n")
+                    if (errors.isEmpty()) onValid() else _error.value = errors.joinToString("\n")
                 }
-                .onFailure { ex ->
-                    _error.value = ex.message ?: "Pre-check failed"
-                }
+                .onFailure { ex -> _error.value = ex.message ?: "Pre-check failed" }
 
             _loading.value = false
         }
     }
 
     fun updateStatus(newStatus: ListingStatus) {
-        _draft.update {
-            it.copy(status = newStatus)
-        }
+        _draft.update { it.copy(status = newStatus) }
     }
-
-    private val _statusListings = MutableStateFlow<List<SellLandModel>>(emptyList())
-    val statusListings: StateFlow<List<SellLandModel>> = _statusListings
 
     fun loadStatusListings() {
         viewModelScope.launch {
@@ -539,21 +496,18 @@ class SellLandViewModel : ViewModel() {
 
             remote.getMyListingsTracking()
                 .onSuccess { apiList: List<SellLandResponse> ->
-                    _statusListings.value = apiList.map { response -> response.toSellLandModel() }
+                    _statusListings.value = apiList.map { it.toSellLandModel() }
                 }
-                .onFailure { ex ->
-                    _error.value = ex.message ?: "Failed to load listings"
-                }
+                .onFailure { ex -> _error.value = ex.message ?: "Failed to load listings" }
 
             _loading.value = false
         }
     }
-    // EDIT LIST ===============
+
     fun setCurrentRequestId(requestId: Int) {
         _currentRequestId.value = requestId
     }
 
-    // Replace loadListingForEdit()
     fun loadListingForEdit(requestId: Int) {
         viewModelScope.launch {
             _loading.value = true
@@ -569,33 +523,126 @@ class SellLandViewModel : ViewModel() {
                     val media = mediaResult.getOrNull().orEmpty()
                     _draft.value = DraftMapper.fromExistingListing(detail, media)
                 }
-                .onFailure { ex ->
-                    _error.value = ex.message ?: "Failed to load listing"
-                }
+                .onFailure { ex -> _error.value = ex.message ?: "Failed to load listing" }
 
             _loading.value = false
         }
     }
 
-    // Optional helper (useful in ReviewScreen)
-    fun isAlreadyPaid(): Boolean {
-        return _currentPaymentStatus.value.equals("success", ignoreCase = true)
+    fun isAlreadyPaid(): Boolean = _currentPaymentStatus.value.equals("success", ignoreCase = true)
+
+    private val _cancelSuccessMessage = MutableStateFlow<String?>(null)
+    val cancelSuccessMessage: StateFlow<String?> = _cancelSuccessMessage
+
+    fun clearCancelSuccessMessage() {
+        _cancelSuccessMessage.value = null
     }
 
+    fun cancelListing(
+        requestId: Int,
+        reason: String,
+        upiId: String,
+        notes: String? = null,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
 
+            remote.cancelListing(requestId, reason, upiId, notes)
+                .onSuccess { res ->
+                    _cancelSuccessMessage.value = res.status
+                    loadStatusListings()
+                    onSuccess()
+                }
+                .onFailure { ex -> _error.value = ex.message ?: "Cancel listing failed" }
 
-    // CANCEL BOTTON
-
-    // CANCEL BUTTON DEMO STATE
-
-
-    fun cancelListing(id: String) {
-        _statusListings.value = _statusListings.value.map { listing ->
-            if (listing.id == id)
-                listing.copy(status = ListingStatus.CANCELLED)
-            else listing
+            _loading.value = false
         }
     }
 
+    // ---------------- OFFER ACTIONS ----------------
 
+    private fun mapOfferStatus(raw: String): OfferStatus = when (raw.trim().uppercase()) {
+        "PENDING" -> OfferStatus.PENDING
+        "ACCEPTED" -> OfferStatus.ACCEPTED
+        "REJECTED" -> OfferStatus.REJECTED
+        "COUNTERED" -> OfferStatus.COUNTERED
+        "EXPIRED" -> OfferStatus.EXPIRED
+        else -> OfferStatus.PENDING
+    }
+
+    fun loadSellerOffers(requestId: Int) {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+
+            remote.getListingOffers(requestId)
+                .onSuccess { response ->
+                    _isOfferLocked.value = response.isOfferLocked
+                    _offerLockExpiresAt.value = response.offerLockExpiresAt
+                    _sellerOffers.value = response.items.map { item ->
+                        OfferModel(
+                            id = item.id.toString(),
+                            buyerId = item.buyerId,
+                            buyerName = item.buyer.fullname,
+                            buyerMobile = item.buyer.mobile,
+                            amount = item.offeredAmount,
+                            counterAmount = item.counterAmount,
+                            status = mapOfferStatus(item.offerStatus)
+                        )
+                    }
+                }
+                .onFailure { ex -> _error.value = ex.message ?: "Failed to load offers" }
+
+            _loading.value = false
+        }
+    }
+
+    fun acceptOffer(requestId: Int, offerId: Int) {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+
+            remote.acceptOffer(requestId, offerId)
+                .onSuccess {
+                    loadSellerOffers(requestId)
+                    loadStatusListings()
+                }
+                .onFailure { ex -> _error.value = ex.message ?: "Accept offer failed" }
+
+            _loading.value = false
+        }
+    }
+
+    fun rejectOffer(requestId: Int, offerId: Int) {
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+
+            remote.rejectOffer(requestId, offerId)
+                .onSuccess { loadSellerOffers(requestId) }
+                .onFailure { ex -> _error.value = ex.message ?: "Reject offer failed" }
+
+            _loading.value = false
+        }
+    }
+
+    fun counterOffer(requestId: Int, offerId: Int, counterAmount: Double) {
+        if (counterAmount <= 0.0) {
+            _error.value = "Counter amount should be greater than 0"
+            return
+        }
+
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+
+            remote.counterOffer(requestId, offerId, counterAmount)
+                .onSuccess { loadSellerOffers(requestId) }
+                .onFailure { ex -> _error.value = ex.message ?: "Counter offer failed" }
+
+            _loading.value = false
+        }
+    }
 }

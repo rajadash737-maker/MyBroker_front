@@ -1,8 +1,24 @@
 package com.example.myapplication.ui.feature.sell_land.status.components
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,14 +36,13 @@ fun ListingCard(
     onCancel: () -> Unit = {},
     onViewOffers: () -> Unit = {}
 ) {
+    val canCancel = listing.status !in setOf(
+        ListingStatus.SOLD,
+        ListingStatus.PROCESSING_REFUND,
+        ListingStatus.REFUND_SUCCESSFUL
+    )
 
-    // ❗ Cancel only before SOLD and CANCELLED
-    val canCancel = listing.status != ListingStatus.SOLD &&
-            listing.status != ListingStatus.CANCELLED
-
-    val formattedPrice =
-        NumberFormat.getNumberInstance(Locale("en", "IN"))
-            .format(listing.price)
+    val formattedPrice = NumberFormat.getNumberInstance(Locale("en", "IN")).format(listing.price)
 
     Card(
         modifier = Modifier
@@ -57,10 +72,12 @@ fun ListingCard(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            SellStatusStepper(status = listing.status)
+            SellStatusStepper(
+                status = listing.status,
+                statusBeforeCancellation = listing.statusBeforeCancellation
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Admin Note
             if (listing.status == ListingStatus.NEEDS_CORRECTION &&
                 !listing.rejectionReason.isNullOrBlank()
             ) {
@@ -78,19 +95,36 @@ fun ListingCard(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // LIVE Offers
+            // Offers + Likes summary in seller status card
             if (listing.status == ListingStatus.LIVE) {
-                Text(
-                    text = "${listing.offerCount} Offers",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${listing.offerCount} Offers",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = "Likes",
+                            tint = Color(0xFFE53935)
+                        )
+                        Text(
+                            text = " ${listing.likesCount}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // STATUS BASED ACTION
             when (listing.status) {
-
                 ListingStatus.LIVE -> {
                     Button(
                         onClick = onViewOffers,
@@ -159,24 +193,31 @@ fun ListingCard(
                     )
                 }
 
-                ListingStatus.CANCELLED -> {
+                ListingStatus.PROCESSING_REFUND -> {
                     Column {
                         Text(
-                            text = "Listing Cancelled",
+                            text = "Cancellation Confirmed",
                             color = Color.Red,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Refund will be processed within 3 days",
+                            text = "Refund is processing. It will be completed after admin confirmation.",
                             color = Color(0xFF2E7D32),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
+
+                ListingStatus.REFUND_SUCCESSFUL -> {
+                    Text(
+                        text = "Refund Successful",
+                        color = Color(0xFF2E7D32),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
 
-            // CANCEL BUTTON (Hidden for SOLD & CANCELLED)
             if (canCancel) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(

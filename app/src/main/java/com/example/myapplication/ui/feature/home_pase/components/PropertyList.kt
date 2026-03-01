@@ -1,11 +1,11 @@
 package com.example.myapplication.ui.feature.home_pase.components
 
-
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,10 +13,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@Composable
-fun PropertyList() {
-    Column {
+data class HomeLandItem(
+    val id: Int,
+    val imageUrl: String?,
+    val price: String,
+    val area: String,
+    val district: String,
+    val state: String
+)
 
+@Composable
+fun PropertyList(
+    lands: List<HomeLandItem>,
+    onViewMoreClick: () -> Unit,
+    onCardClick: (Int) -> Unit
+) {
+    Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -34,19 +46,24 @@ fun PropertyList() {
                 text = "View More",
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp,
-                modifier = Modifier.clickable {
-                    // later navigate to full property list
-                }
+                modifier = Modifier.clickable { onViewMoreClick() }
             )
         }
 
         LazyRow(
-            modifier = Modifier.padding(start = 16.dp)
+            modifier = Modifier.padding(start = 16.dp),
+            contentPadding = PaddingValues(end = 16.dp)
         ) {
-            items(3) {
-                PropertyCard("₹245,000", "Orlando, FL")
+            items(lands, key = { it.id }) { land ->
+                PropertyCard(
+                    imageUrl = land.imageUrl,
+                    price = land.price,
+                    area = land.area,
+                    district = land.district,
+                    state = land.state,
+                    onClick = { onCardClick(land.id) }
+                )
             }
         }
     }
 }
-

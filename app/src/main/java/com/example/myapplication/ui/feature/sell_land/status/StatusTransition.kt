@@ -18,16 +18,19 @@ object StatusTransition {
                 target == ListingStatus.LIVE || target == ListingStatus.NEEDS_CORRECTION
 
             ListingStatus.LIVE ->
-                target == ListingStatus.SOLD || target == ListingStatus.CANCELLED   // 👈 allow cancel
+                target == ListingStatus.SOLD || target == ListingStatus.PROCESSING_REFUND
 
             ListingStatus.NEEDS_CORRECTION ->
                 target == ListingStatus.UNDER_REVIEW || target == ListingStatus.DRAFT
 
-            ListingStatus.SOLD ->
+            ListingStatus.PROCESSING_REFUND ->
+                target == ListingStatus.REFUND_SUCCESSFUL
+
+            ListingStatus.REFUND_SUCCESSFUL ->
                 false
 
-            ListingStatus.CANCELLED ->
-                false   // 👈 once cancelled, no further move
+            ListingStatus.SOLD ->
+                false
         }
     }
 }

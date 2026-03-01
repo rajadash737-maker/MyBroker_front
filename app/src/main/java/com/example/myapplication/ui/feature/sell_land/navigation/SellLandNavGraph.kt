@@ -196,9 +196,7 @@ fun NavGraphBuilder.sellLandGraph(
         route = "cancel_reason/{id}",
         arguments = listOf(navArgument("id") { type = NavType.StringType })
     ) { backStackEntry ->
-
         val id = backStackEntry.arguments?.getString("id") ?: ""
-
         val vm: SellLandViewModel = viewModel()
 
         CancelReasonScreen(
@@ -208,7 +206,16 @@ fun NavGraphBuilder.sellLandGraph(
         )
     }
 
-    composable("offers/{listingId}") {
-        OfferScreen()
+    composable(
+        route = "offers/{listingId}",
+        arguments = listOf(navArgument("listingId") { type = NavType.IntType })
+    ) { backStackEntry ->
+        val listingId = backStackEntry.arguments?.getInt("listingId") ?: 0
+        val vm: SellLandViewModel = viewModel()
+
+        OfferScreen(
+            requestId = listingId,
+            viewModel = vm
+        )
     }
 }

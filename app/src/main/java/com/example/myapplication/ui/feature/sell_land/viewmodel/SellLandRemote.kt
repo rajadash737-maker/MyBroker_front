@@ -7,11 +7,16 @@ import android.provider.OpenableColumns
 import com.example.myapplication.network.ApiClient
 import com.example.myapplication.ui.feature.sell_land.model.BoundaryPoint
 import com.example.myapplication.ui.feature.sell_land.model.BoundaryRequest
+import com.example.myapplication.ui.feature.sell_land.model.CancelListingRequest
+import com.example.myapplication.ui.feature.sell_land.model.CancelListingResponse
+import com.example.myapplication.ui.feature.sell_land.model.CounterOfferRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentInitRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentMarkPaidRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellerOfferActionResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellerOfferListResponse
 import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
 import com.google.android.gms.maps.model.LatLng
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -20,6 +25,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
+import com.example.myapplication.ui.feature.sell_land.model.DocumentRequirementsResponse
 
 class SellLandRemote {
 
@@ -121,8 +127,6 @@ class SellLandRemote {
         }
     }
 
-
-
     suspend fun getMyListingsTracking(): Result<List<SellLandResponse>> = runCatching {
         val res = ApiClient.apiService.getMyListingsTracking()
         if (!res.isSuccessful || res.body() == null) {
@@ -135,6 +139,77 @@ class SellLandRemote {
         val res = ApiClient.apiService.getListingDetails(requestId)
         if (!res.isSuccessful || res.body() == null) {
             throw Exception(res.errorBody()?.string() ?: "Get listing details failed")
+        }
+        res.body()!!
+    }
+
+    suspend fun cancelListing(
+        requestId: Int,
+        reason: String,
+        upiId: String,
+        notes: String? = null
+    ): Result<CancelListingResponse> = runCatching {
+        val res = ApiClient.apiService.cancelListing(
+            id = requestId,
+            body = CancelListingRequest(
+                reason = reason,
+                upiId = upiId,
+                notes = notes
+            )
+        )
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Cancel listing failed")
+        }
+        res.body()!!
+    }
+
+    // ---------------- SELLER OFFER METHODS ----------------
+
+    suspend fun getListingOffers(requestId: Int): Result<SellerOfferListResponse> = runCatching {
+        val res = ApiClient.apiService.getListingOffers(requestId)
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Get offers failed")
+        }
+        res.body()!!
+    }
+
+    suspend fun acceptOffer(requestId: Int, offerId: Int): Result<SellerOfferActionResponse> = runCatching {
+        val res = ApiClient.apiService.acceptOffer(requestId, offerId)
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Accept offer failed")
+        }
+        res.body()!!
+    }
+
+    suspend fun rejectOffer(requestId: Int, offerId: Int): Result<SellerOfferActionResponse> = runCatching {
+        val res = ApiClient.apiService.rejectOffer(requestId, offerId)
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Reject offer failed")
+        }
+        res.body()!!
+    }
+
+    suspend fun counterOffer(
+        requestId: Int,
+        offerId: Int,
+        counterAmount: Double
+    ): Result<SellerOfferActionResponse> = runCatching {
+        val res = ApiClient.apiService.counterOffer(
+            id = requestId,
+            offerId = offerId,
+            body = CounterOfferRequest(counterAmount = counterAmount)
+        )
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Counter offer failed")
+        }
+        res.body()!!
+    }
+
+
+    suspend fun getDocumentRequirements(ownershipType: String? = null): Result<List<DocumentRequirementsResponse>> = runCatching {
+        val res = ApiClient.apiService.getDocumentRequirements(ownershipType)
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Get document requirements failed")
         }
         res.body()!!
     }
