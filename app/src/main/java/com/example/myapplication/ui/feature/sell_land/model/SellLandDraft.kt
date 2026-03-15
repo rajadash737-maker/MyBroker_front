@@ -15,17 +15,56 @@ data class SellLandDraft(
 )
 
 data class LandDocuments(
-    // Legacy fields (existing screens/logic ke liye)
+    // Legacy fields
     val saleDeed: String? = null,
     val khataCertificate: String? = null,
     val encumbrance: String? = null,
     val sellerIdentity: String? = null,
 
-    // New dynamic mapping: key=document_type, value=file_url
+    // New mapping: key=document_type, value=file_url
     val dynamicDocs: Map<String, String> = emptyMap()
 ) {
-    fun get(docType: String): String? = dynamicDocs[docType]
-    fun isUploaded(docType: String): Boolean = !dynamicDocs[docType].isNullOrBlank()
+    private fun normalizedDynamic(): Map<String, String> {
+        return dynamicDocs
+            .mapKeys { it.key.trim().lowercase() }
+            .filterValues { it.isNotBlank() }
+    }
+
+    fun asMap(): Map<String, String> {
+        val base = normalizedDynamic().toMutableMap()
+
+        if (!saleDeed.isNullOrBlank()) {
+            base.putIfAbsent("sale_deed", saleDeed)
+            base.putIfAbsent("original_sale_deed", saleDeed)
+        }
+        if (!khataCertificate.isNullOrBlank()) {
+            base.putIfAbsent("khata_patta", khataCertificate)
+        }
+        if (!encumbrance.isNullOrBlank()) {
+            base.putIfAbsent("encumbrance_certificate", encumbrance)
+        }
+        if (!sellerIdentity.isNullOrBlank()) {
+            base.putIfAbsent("aadhaar_pan", sellerIdentity)
+            base.putIfAbsent("seller_identity_proof", sellerIdentity)
+        }
+
+        return base
+    }
+
+    fun get(docType: String): String? = asMap()[docType.trim().lowercase()]
+
+    fun isUploaded(docType: String): Boolean = !get(docType).isNullOrBlank()
+
+    fun withDoc(docType: String, fileUrl: String): LandDocuments {
+        val key = docType.trim().lowercase()
+        if (key.isBlank() || fileUrl.isBlank()) return this
+        return copy(dynamicDocs = normalizedDynamic() + (key to fileUrl))
+    }
+
+    fun withoutDoc(docType: String): LandDocuments {
+        val key = docType.trim().lowercase()
+        return copy(dynamicDocs = normalizedDynamic() - key)
+    }
 }
 
 data class SellLandModel(
@@ -36,5 +75,10 @@ data class SellLandModel(
     val statusBeforeCancellation: ListingStatus? = null,
     val rejectionReason: String? = null,
     val offerCount: Int = 0,
-    val likesCount: Int = 0
-)
+    val likesCount: Int = 0,
+    val images: List<String> = emptyList(),
+    val profileImageUrl: String? = null
+) {
+    val coverImageUrl: String?
+        get() = images.firstOrNull()
+}

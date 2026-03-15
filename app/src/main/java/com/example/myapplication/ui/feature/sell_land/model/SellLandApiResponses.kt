@@ -39,20 +39,19 @@ data class SellLandResponse(
     @SerializedName("can_cancel_listing") val canCancelListing: Boolean = false,
     @SerializedName("likes_count") val likesCount: Int = 0,
     @SerializedName("offer_count") val offerCount: Int = 0,
+    @SerializedName("images") val images: List<String>? = null,
+    @SerializedName("profile_image_url") val profileImageUrl: String? = null,
     @SerializedName("tracking") val tracking: TrackingDto? = null,
     @SerializedName("required_document_types") val requiredDocumentTypes: List<String> = emptyList(),
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String
 )
 
-
 data class DocumentRequirementsResponse(
     @SerializedName("ownership_type") val ownershipType: String,
     @SerializedName("required_document_types") val requiredDocumentTypes: List<String>,
     @SerializedName("optional_document_types") val optionalDocumentTypes: List<String> = emptyList()
 )
-
-
 
 data class SellLandMediaResponse(
     @SerializedName("id") val id: Int,
@@ -63,7 +62,13 @@ data class SellLandMediaResponse(
     @SerializedName("file_name") val fileName: String,
     @SerializedName("is_required") val isRequired: Boolean,
     @SerializedName("created_at") val createdAt: String
-)
+) {
+    val normalizedMediaType: String
+        get() = mediaType.trim().lowercase()
+
+    val normalizedDocumentType: String?
+        get() = documentType?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
+}
 
 data class DeleteMediaResponse(
     @SerializedName("status") val status: String,

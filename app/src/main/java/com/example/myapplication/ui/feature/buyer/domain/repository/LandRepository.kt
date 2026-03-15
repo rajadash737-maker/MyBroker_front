@@ -2,6 +2,7 @@ package com.example.myapplication.ui.feature.buyer.domain.repository
 
 import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOffer
 import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOfferActionResult
+import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOfferCreateResult
 import com.example.myapplication.ui.feature.buyer.explore.Land
 import com.example.myapplication.ui.feature.buyer.land_detail.LandDetail
 
@@ -26,7 +27,7 @@ interface LandRepository {
 
     suspend fun getLandDetail(requestId: Int): LandDetail
 
-    suspend fun makeOffer(requestId: Int, amount: Double): Boolean
+    suspend fun makeOffer(requestId: Int, amount: Double): BuyerOfferCreateResult
 
     suspend fun getBuyerOffers(): List<BuyerOffer>
 

@@ -22,12 +22,14 @@ data class ExploreLandItemDto(
     val state: String?,
     val pincode: String?,
     @SerializedName("boundary_points") val boundaryPoints: List<BoundaryPointDto> = emptyList(),
-    val images: List<String>,
+    @SerializedName("images") val images: List<String> = emptyList(),
     @SerializedName("is_liked") val isLiked: Boolean,
     @SerializedName("is_offer_locked") val isOfferLocked: Boolean = false,
     @SerializedName("offer_lock_expires_at") val offerLockExpiresAt: String? = null,
-    @SerializedName("created_at") val createdAt: String
-)
+    @SerializedName("created_at") val createdAt: String,
+
+
+    )
 
 data class BoundaryPointDto(
     val lat: Double,

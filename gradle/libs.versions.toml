@@ -23,6 +23,7 @@ foundation = "1.10.3"
 roomKtx = "2.8.4"
 androidxRuntime = "1.10.3"
 lifecycleViewmodelKtx = "2.10.0"
+foundationVersion = "1.10.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +55,7 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
 runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "androidxRuntime" }
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
+androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

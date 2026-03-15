@@ -1,53 +1,89 @@
 package com.example.myapplication.ui.feature.sell_land.screens
 
-
-
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.myapplication.ui.feature.sell_land.components.SellLandTopBar
 import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
-
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.Alignment
-
-
-
-
-
+@SuppressLint("MissingPermission")
 @Composable
 fun MapBoundaryScreen(
     viewModel: SellLandViewModel,
     onContinue: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val draft by viewModel.draft.collectAsState()
-
     var points by remember { mutableStateOf(draft.polygon) }
-
     var isSatellite by remember { mutableStateOf(false) }
 
-    val mapProperties = MapProperties(
-        mapType = if (isSatellite) MapType.SATELLITE else MapType.NORMAL
-    )
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasLocationPermission = granted
+    }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
-            points.firstOrNull() ?: LatLng(20.5937, 78.9629), // India center
+            points.firstOrNull() ?: LatLng(20.5937, 78.9629),
             16f
         )
     }
+
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) {
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    LaunchedEffect(hasLocationPermission) {
+        if (hasLocationPermission && points.isEmpty()) {
+            val fused = LocationServices.getFusedLocationProviderClient(context)
+            fused.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                        LatLng(loc.latitude, loc.longitude),
+                        17f
+                    )
+                }
+            }
+        }
+    }
+
+    val mapProperties = MapProperties(
+        mapType = if (isSatellite) MapType.SATELLITE else MapType.NORMAL,
+        isMyLocationEnabled = hasLocationPermission
+    )
+
+    val mapUiSettings = MapUiSettings(
+        myLocationButtonEnabled = hasLocationPermission,
+        zoomControlsEnabled = true
+    )
 
     Scaffold(
         topBar = {
@@ -59,7 +95,6 @@ fun MapBoundaryScreen(
                     viewModel.saveBoundary()
                     viewModel.saveDraft(step = 4)
                 }
-
             )
         },
         bottomBar = {
@@ -72,35 +107,28 @@ fun MapBoundaryScreen(
                     viewModel.saveDraft(step = 4)
                     onContinue()
                 }
-
             )
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-
                 GoogleMap(
                     modifier = Modifier.matchParentSize(),
                     cameraPositionState = cameraPositionState,
                     properties = mapProperties,
+                    uiSettings = mapUiSettings,
                     onMapClick = { latLng ->
-                        if (!points.contains(latLng)) {
-                            points = points + latLng
-                        }
+                        if (!points.contains(latLng)) points = points + latLng
                     }
                 ) {
-
-                    // Markers
                     points.forEach { point ->
                         Marker(
                             state = MarkerState(position = point),
@@ -111,7 +139,6 @@ fun MapBoundaryScreen(
                         )
                     }
 
-                    // Polygon
                     if (points.size >= 3) {
                         Polygon(
                             points = points,
@@ -129,24 +156,19 @@ fun MapBoundaryScreen(
                         .padding(12.dp)
                 )
 
-
-                // 👇 Floating Button MUST be inside Box
                 FloatingActionButton(
                     onClick = { isSatellite = !isSatellite },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Layers,
-                        contentDescription = "Toggle Map"
-                    )
+                    Icon(Icons.Default.Layers, contentDescription = "Toggle Map")
                 }
             }
         }
     }
-
 }
+
 
 @Composable
 fun BoundaryActionBar(
@@ -197,7 +219,7 @@ fun InstructionCard(
             Spacer(modifier = Modifier.height(6.dp))
             Text("• Tap on map to add points")
             Text("• Minimum 3 points required")
-            Text("• Double tap to remove points")
+            Text("• Tap marker to remove point")
             Text("• Points selected: $pointCount")
         }
     }

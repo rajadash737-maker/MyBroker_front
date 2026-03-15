@@ -23,15 +23,16 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOffer
 import kotlinx.coroutines.delay
 import java.text.DecimalFormat
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun BuyerOfferCard(
     offer: BuyerOffer,
     onAcceptCounter: (Int) -> Unit,
     onRejectCounter: (Int) -> Unit,
+    onCounterAgain: (Int) -> Unit,
     onBookNow: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -46,9 +47,7 @@ fun BuyerOfferCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF0EDF6) // white ki jagah attractive soft card tone
-        )
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0EDF6))
     ) {
         Column(
             modifier = Modifier
@@ -84,10 +83,7 @@ fun BuyerOfferCard(
             Text("Your Offer: ₹ ${offer.offeredAmount.asAmount()}", style = MaterialTheme.typography.bodyMedium)
 
             offer.counterAmount?.let {
-                Text(
-                    text = "Counter Offer: ₹ ${it.asAmount()}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text("Counter Offer: ₹ ${it.asAmount()}", style = MaterialTheme.typography.bodyMedium)
             }
 
             if (offer.isBookWindowActive && offer.bookingStatus.equals("accepted_book_now", true)) {
@@ -110,14 +106,13 @@ fun BuyerOfferCard(
             BuyerOfferActionButtons(
                 canAcceptCounter = offer.canAcceptCounter,
                 canRejectCounter = offer.canRejectCounter,
+                canCounterAgain = offer.bookingStatus.equals("counter_received", true),
                 onAcceptCounter = { onAcceptCounter(offer.offerId) },
-                onRejectCounter = { onRejectCounter(offer.offerId) }
+                onRejectCounter = { onRejectCounter(offer.offerId) },
+                onCounterAgain = { onCounterAgain(offer.requestId) }
             )
 
-            if (
-                !offer.isBookWindowActive &&
-                offer.bookingStatus.equals("accepted_book_now", true)
-            ) {
+            if (!offer.isBookWindowActive && offer.bookingStatus.equals("accepted_book_now", true)) {
                 OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
                     Text("Booking Window Expired")
                 }
@@ -143,14 +138,29 @@ private fun rememberCountdownText(expiresAt: String?): String? {
     val h = remaining / (1000 * 60 * 60)
     val m = (remaining / (1000 * 60)) % 60
     val s = (remaining / 1000) % 60
-    return String.format("%02d:%02d:%02d", h, m, s)
+    return String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
 }
 
 private fun parseIsoToMillis(raw: String?): Long? {
     if (raw.isNullOrBlank()) return null
-    return runCatching { OffsetDateTime.parse(raw).toInstant().toEpochMilli() }
-        .recoverCatching { LocalDateTime.parse(raw).toInstant(ZoneOffset.UTC).toEpochMilli() }
-        .getOrNull()
+
+    val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        "yyyy-MM-dd'T'HH:mm:ss"
+    )
+
+    patterns.forEach { pattern ->
+        runCatching {
+            val sdf = SimpleDateFormat(pattern, Locale.US)
+            if (pattern == "yyyy-MM-dd'T'HH:mm:ss") {
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+            }
+            sdf.parse(raw)?.time
+        }.getOrNull()?.let { return it }
+    }
+
+    return null
 }
 
 private fun Double.asAmount(): String = DecimalFormat("#,##0.##").format(this)

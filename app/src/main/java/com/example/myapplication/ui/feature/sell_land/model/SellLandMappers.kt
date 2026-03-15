@@ -9,14 +9,13 @@ fun SellLandResponse.toSellLandModel(): SellLandModel {
         isDraft = isDraft
     )
 
-    val mappedStatusBeforeCancellation = statusBeforeCancellation
-        ?.let { previous ->
-            StatusMapper.fromBackend(
-                stage = previous,
-                fallbackStatus = previous,
-                isDraft = false
-            )
-        }
+    val mappedStatusBeforeCancellation = statusBeforeCancellation?.let { previous ->
+        StatusMapper.fromBackend(
+            stage = previous,
+            fallbackStatus = previous,
+            isDraft = false
+        )
+    }
 
     return SellLandModel(
         id = id.toString(),
@@ -26,6 +25,8 @@ fun SellLandResponse.toSellLandModel(): SellLandModel {
         statusBeforeCancellation = mappedStatusBeforeCancellation,
         offerCount = offerCount,
         likesCount = likesCount,
-        rejectionReason = tracking?.correctionReason ?: rejectionReason ?: fieldOfficerRejectionReason
+        rejectionReason = tracking?.correctionReason ?: rejectionReason ?: fieldOfficerRejectionReason,
+        images = images.orEmpty().filter { it.isNotBlank() },
+        profileImageUrl = profileImageUrl
     )
 }

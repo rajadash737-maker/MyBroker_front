@@ -1,15 +1,65 @@
-// ReviewScreen.kt
 package com.example.myapplication.ui.feature.sell_land.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.feature.sell_land.components.SellLandTopBar
 import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
+import java.text.DecimalFormat
+
+private fun formatPrice(value: Double?): String {
+    if (value == null || value <= 0.0) return "-"
+    return DecimalFormat("#,##0.##").format(value)
+}
+
+private fun displayPriceType(value: String?): String {
+    return when (value?.trim()?.lowercase()) {
+        "price_per_unit" -> "Price per Sq.ft"
+        "total_price" -> "Total Price"
+        else -> value ?: "-"
+    }
+}
+
+private fun displayAvailability(value: String?): String {
+    return when (value?.trim()?.lowercase()) {
+        "within_3_months" -> "Within 3 Months"
+        "immediate" -> "Immediate"
+        else -> value ?: "-"
+    }
+}
+
+private fun countDocuments(
+    dynamicDocs: Map<String, String>,
+    saleDeed: String?,
+    khata: String?,
+    encumbrance: String?,
+    sellerIdentity: String?
+): Int {
+    val dynamicCount = dynamicDocs.values.count { it.isNotBlank() }
+    if (dynamicCount > 0) return dynamicCount
+
+    return listOf(saleDeed, khata, encumbrance, sellerIdentity)
+        .count { !it.isNullOrBlank() }
+}
 
 @Composable
 fun ReviewScreen(
@@ -31,9 +81,7 @@ fun ReviewScreen(
     val alreadyPaid = paymentStatus.equals("success", ignoreCase = true)
 
     LaunchedEffect(submitResult?.requestId) {
-        if (submitResult != null) {
-            onSubmitSuccess()
-        }
+        if (submitResult != null) onSubmitSuccess()
     }
 
     Scaffold(
@@ -68,12 +116,14 @@ fun ReviewScreen(
 
             ReviewSection(title = "Photos & Documents", onEdit = onEditMedia) {
                 Text("Photos: ${draft.images.size}")
-                val docCount = listOf(
-                    draft.documents.saleDeed,
-                    draft.documents.khataCertificate,
-                    draft.documents.encumbrance,
-                    draft.documents.sellerIdentity
-                ).count { it != null }
+
+                val docCount = countDocuments(
+                    dynamicDocs = draft.documents.dynamicDocs,
+                    saleDeed = draft.documents.saleDeed,
+                    khata = draft.documents.khataCertificate,
+                    encumbrance = draft.documents.encumbrance,
+                    sellerIdentity = draft.documents.sellerIdentity
+                )
                 Text("Documents: $docCount")
             }
 
@@ -82,10 +132,10 @@ fun ReviewScreen(
             }
 
             ReviewSection(title = "Pricing", onEdit = onEditPricing) {
-                Text("Type: ${draft.pricing?.priceType ?: "-"}")
-                Text("Price: ₹${draft.pricing?.price ?: "-"}")
+                Text("Type: ${displayPriceType(draft.pricing?.priceType)}")
+                Text("Price: ₹${formatPrice(draft.pricing?.price)}")
                 Text("Negotiable: ${if (draft.pricing?.negotiable == true) "Yes" else "No"}")
-                Text("Availability: ${draft.pricing?.availability ?: "-"}")
+                Text("Availability: ${displayAvailability(draft.pricing?.availability)}")
             }
 
             Spacer(modifier = Modifier.height(12.dp))

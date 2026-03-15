@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.feature.buyer.explore.components
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,12 +29,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.myapplication.network.ApiClient
 import com.example.myapplication.ui.feature.buyer.explore.Land
 import java.text.DecimalFormat
 import java.time.Duration
@@ -49,10 +54,13 @@ fun LandCard(
     onMakeOfferClick: () -> Unit,
     onMapClick: () -> Unit
 ) {
-    val imageList = if (land.images.isNotEmpty()) {
+    val context = LocalContext.current
+
+    val imageList = remember(land.images) {
         land.images
-    } else {
-        listOf("https://via.placeholder.com/800x500?text=No+Image")
+            .mapNotNull { raw -> ApiClient.absoluteUrl(raw)?.trim() }
+            .filter { it.isNotBlank() }
+            .ifEmpty { listOf("https://via.placeholder.com/800x500?text=No+Image") }
     }
 
     val isLocked = land.isOfferLocked
@@ -78,8 +86,17 @@ fun LandCard(
                         .fillMaxWidth()
                         .height(220.dp)
                 ) { page ->
+                    val imageUrl = imageList[page]
                     AsyncImage(
-                        model = imageList[page],
+                        model = ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .crossfade(true)
+                            .listener(
+                                onError = { _, result ->
+                                    Log.e("LandCard", "Image failed: $imageUrl", result.throwable)
+                                }
+                            )
+                            .build(),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.feature.buyer.visit_request
 
-
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.ui.feature.buyer.domain.repository.LandRepository
@@ -101,6 +99,37 @@ class BuyerLandsViewModel(
                     it.copy(
                         isLoading = false,
                         errorMessage = throwable.message ?: "Failed to reject counter offer"
+                    )
+                }
+            }
+        }
+    }
+
+    fun counterAgain(requestId: Int, amountText: String) {
+        val amount = amountText.trim().toDoubleOrNull()
+        if (amount == null || amount <= 0.0) {
+            _uiState.update { it.copy(errorMessage = "Please enter valid amount") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, actionMessage = null) }
+
+            runCatching {
+                landRepository.makeOffer(requestId = requestId, amount = amount)
+            }.onSuccess { result ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        actionMessage = result.status
+                    )
+                }
+                loadBuyerOffers()
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = throwable.message ?: "Failed to send counter offer again"
                     )
                 }
             }

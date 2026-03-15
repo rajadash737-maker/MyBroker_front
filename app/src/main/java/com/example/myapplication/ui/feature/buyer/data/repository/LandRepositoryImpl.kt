@@ -7,6 +7,7 @@ import com.example.myapplication.ui.feature.buyer.data.remote.dto.ExploreLandIte
 import com.example.myapplication.ui.feature.buyer.data.remote.dto.MakeOfferRequestDto
 import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOffer
 import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOfferActionResult
+import com.example.myapplication.ui.feature.buyer.domain.model.BuyerOfferCreateResult
 import com.example.myapplication.ui.feature.buyer.domain.repository.LandRepository
 import com.example.myapplication.ui.feature.buyer.explore.Land
 import com.example.myapplication.ui.feature.buyer.land_detail.LandDetail
@@ -77,15 +78,19 @@ class LandRepositoryImpl(
             mapQuery = dto.mapQuery,
             mapUrl = dto.mapUrl
         )
-
     }
 
-    override suspend fun makeOffer(requestId: Int, amount: Double): Boolean {
+    override suspend fun makeOffer(requestId: Int, amount: Double): BuyerOfferCreateResult {
         val response = landApi.makeOffer(
             requestId = requestId,
             body = MakeOfferRequestDto(amount = amount)
         )
-        return response.status.equals("Offer sent", ignoreCase = true)
+        return BuyerOfferCreateResult(
+            status = response.status,
+            requestId = response.requestId,
+            offerId = response.offerId,
+            offerStatus = response.offerStatus
+        )
     }
 
     override suspend fun getBuyerOffers(): List<BuyerOffer> {
@@ -127,5 +132,4 @@ class LandRepositoryImpl(
             createdAt = dto.createdAt
         )
     }
-
 }

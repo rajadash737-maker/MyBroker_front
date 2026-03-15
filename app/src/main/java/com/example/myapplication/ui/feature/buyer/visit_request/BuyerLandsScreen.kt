@@ -12,20 +12,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.feature.buyer.visit_request.components.BuyerOfferCard
 
@@ -38,11 +46,64 @@ fun BuyerLandsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var showCounterDialog by remember { mutableStateOf(false) }
+    var counterRequestId by remember { mutableIntStateOf(-1) }
+    var counterAmountInput by remember { mutableStateOf("") }
+
     LaunchedEffect(uiState.errorMessage, uiState.actionMessage) {
         uiState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
         uiState.actionMessage?.let { snackbarHostState.showSnackbar(it) }
         if (uiState.errorMessage != null) viewModel.clearError()
         if (uiState.actionMessage != null) viewModel.clearActionMessage()
+    }
+
+    if (showCounterDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCounterDialog = false
+                counterAmountInput = ""
+                counterRequestId = -1
+            },
+            title = { Text("Counter Again") },
+            text = {
+                OutlinedTextField(
+                    value = counterAmountInput,
+                    onValueChange = { input ->
+                        counterAmountInput = input.filter { ch -> ch.isDigit() || ch == '.' }
+                    },
+                    label = { Text("Enter new amount") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.counterAgain(
+                            requestId = counterRequestId,
+                            amountText = counterAmountInput
+                        )
+                        showCounterDialog = false
+                        counterAmountInput = ""
+                        counterRequestId = -1
+                    }
+                ) {
+                    Text("Send")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showCounterDialog = false
+                        counterAmountInput = ""
+                        counterRequestId = -1
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Column(
@@ -99,6 +160,11 @@ fun BuyerLandsScreen(
                         offer = offer,
                         onAcceptCounter = viewModel::acceptCounterOffer,
                         onRejectCounter = viewModel::rejectCounterOffer,
+                        onCounterAgain = { requestId ->
+                            counterRequestId = requestId
+                            counterAmountInput = ""
+                            showCounterDialog = true
+                        },
                         onBookNow = onBookNow
                     )
                 }

@@ -1,4 +1,3 @@
-// SellLandRemote.kt
 package com.example.myapplication.ui.feature.sell_land.viewmodel
 
 import android.content.ContentResolver
@@ -10,6 +9,7 @@ import com.example.myapplication.ui.feature.sell_land.model.BoundaryRequest
 import com.example.myapplication.ui.feature.sell_land.model.CancelListingRequest
 import com.example.myapplication.ui.feature.sell_land.model.CancelListingResponse
 import com.example.myapplication.ui.feature.sell_land.model.CounterOfferRequest
+import com.example.myapplication.ui.feature.sell_land.model.DocumentRequirementsResponse
 import com.example.myapplication.ui.feature.sell_land.model.PaymentInitRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentMarkPaidRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentResponse
@@ -25,9 +25,19 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
-import com.example.myapplication.ui.feature.sell_land.model.DocumentRequirementsResponse
 
 class SellLandRemote {
+
+    private fun normalizeDocumentType(raw: String): String {
+        return raw.trim().lowercase()
+    }
+
+    private fun normalizeMediaItem(item: SellLandMediaResponse): SellLandMediaResponse {
+        return item.copy(
+            mediaType = item.mediaType.trim().lowercase(),
+            documentType = item.documentType?.trim()?.lowercase()
+        )
+    }
 
     suspend fun saveBoundary(requestId: Int, points: List<LatLng>): Result<Unit> = runCatching {
         val body = BoundaryRequest(points = points.map { BoundaryPoint(lat = it.latitude, lng = it.longitude) })
@@ -42,19 +52,24 @@ class SellLandRemote {
         if (!res.isSuccessful || res.body() == null) {
             throw Exception(res.errorBody()?.string() ?: "Photo upload failed")
         }
-        res.body()!!
+        normalizeMediaItem(res.body()!!)
     }
 
-    suspend fun uploadDocument(requestId: Int, documentType: String, file: File): Result<SellLandMediaResponse> = runCatching {
-        val fileReq = file.asRequestBody("application/octet-stream".toMediaTypeOrNull())
+    suspend fun uploadDocument(
+        requestId: Int,
+        documentType: String,
+        file: File
+    ): Result<SellLandMediaResponse> = runCatching {
+        val normalizedType = normalizeDocumentType(documentType)
+        val fileReq = file.asRequestBody("application/pdf".toMediaTypeOrNull())
         val filePart = MultipartBody.Part.createFormData("file", file.name, fileReq)
-        val docTypeBody: RequestBody = documentType.toRequestBody("text/plain".toMediaTypeOrNull())
+        val docTypeBody: RequestBody = normalizedType.toRequestBody("text/plain".toMediaTypeOrNull())
 
         val res = ApiClient.apiService.uploadDocument(requestId, docTypeBody, filePart)
         if (!res.isSuccessful || res.body() == null) {
             throw Exception(res.errorBody()?.string() ?: "Document upload failed")
         }
-        res.body()!!
+        normalizeMediaItem(res.body()!!)
     }
 
     suspend fun initiatePayment(requestId: Int, method: String): Result<PaymentResponse> = runCatching {
@@ -66,7 +81,9 @@ class SellLandRemote {
     }
 
     suspend fun markPaid(paymentId: Int, providerRef: String? = null): Result<PaymentResponse> = runCatching {
-        val res = ApiClient.apiService.markPaid(PaymentMarkPaidRequest(paymentId = paymentId, providerRef = providerRef))
+        val res = ApiClient.apiService.markPaid(
+            PaymentMarkPaidRequest(paymentId = paymentId, providerRef = providerRef)
+        )
         if (!res.isSuccessful || res.body() == null) {
             throw Exception(res.errorBody()?.string() ?: "Mark paid failed")
         }
@@ -95,7 +112,7 @@ class SellLandRemote {
         val safeBase = originalName?.substringBeforeLast(".")?.ifBlank { "upload_${System.currentTimeMillis()}" }
             ?: "upload_${System.currentTimeMillis()}"
 
-        val temp = File(cacheDir, "$safeBase.$ext")
+        val temp = File(cacheDir, "${safeBase}_${System.currentTimeMillis()}.$ext")
         contentResolver.openInputStream(uri).use { input ->
             temp.outputStream().use { output ->
                 input?.copyTo(output) ?: throw IllegalStateException("Cannot read file")
@@ -117,7 +134,7 @@ class SellLandRemote {
         if (!res.isSuccessful || res.body() == null) {
             throw Exception(res.errorBody()?.string() ?: "Get media failed")
         }
-        res.body()!!
+        res.body()!!.map { normalizeMediaItem(it) }
     }
 
     suspend fun deleteListingMedia(requestId: Int, mediaId: Int): Result<Unit> = runCatching {
@@ -134,6 +151,16 @@ class SellLandRemote {
         }
         res.body()!!
     }
+
+    suspend fun getMyListings(): Result<List<SellLandResponse>> = runCatching {
+        val res = ApiClient.apiService.getMyListings()
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Get my listings failed")
+        }
+        res.body()!!
+    }
+
+
 
     suspend fun getListingDetails(requestId: Int): Result<SellLandResponse> = runCatching {
         val res = ApiClient.apiService.getListingDetails(requestId)
@@ -162,8 +189,6 @@ class SellLandRemote {
         }
         res.body()!!
     }
-
-    // ---------------- SELLER OFFER METHODS ----------------
 
     suspend fun getListingOffers(requestId: Int): Result<SellerOfferListResponse> = runCatching {
         val res = ApiClient.apiService.getListingOffers(requestId)
@@ -205,7 +230,6 @@ class SellLandRemote {
         res.body()!!
     }
 
-
     suspend fun getDocumentRequirements(ownershipType: String? = null): Result<List<DocumentRequirementsResponse>> = runCatching {
         val res = ApiClient.apiService.getDocumentRequirements(ownershipType)
         if (!res.isSuccessful || res.body() == null) {
@@ -213,5 +237,4 @@ class SellLandRemote {
         }
         res.body()!!
     }
-
 }

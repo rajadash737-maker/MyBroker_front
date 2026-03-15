@@ -79,12 +79,12 @@ class LandDetailViewModel(
             }
 
             runCatching { landRepository.makeOffer(requestId, amount) }
-                .onSuccess { ok ->
+                .onSuccess { result ->
                     _uiState.update {
                         it.copy(
                             isSubmittingOffer = false,
-                            offerSuccessMessage = if (ok) "Offer sent successfully" else null,
-                            errorMessage = if (ok) null else "Offer not sent"
+                            offerSuccessMessage = result.status.ifBlank { "Offer sent successfully" },
+                            errorMessage = null
                         )
                     }
                 }
@@ -98,7 +98,6 @@ class LandDetailViewModel(
                 }
         }
     }
-
 
     fun clearMessage() {
         _uiState.update { it.copy(errorMessage = null, offerSuccessMessage = null) }

@@ -1,6 +1,13 @@
 package com.example.myapplication.ui.feature.sell_land.utils
 
-import com.example.myapplication.ui.feature.sell_land.model.*
+import com.example.myapplication.ui.feature.sell_land.model.LandDetails
+import com.example.myapplication.ui.feature.sell_land.model.LandDocuments
+import com.example.myapplication.ui.feature.sell_land.model.PricingDetails
+import com.example.myapplication.ui.feature.sell_land.model.SellLandDraft
+import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandStep
+import com.example.myapplication.ui.feature.sell_land.model.SellerDetails
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONArray
 
@@ -48,25 +55,26 @@ object DraftMapper {
         media: List<SellLandMediaResponse>
     ): SellLandDraft {
         val photos = media
-            .filter { it.mediaType == "photo" }
+            .filter { it.mediaType.equals("photo", ignoreCase = true) }
             .map { it.fileUrl }
 
         fun firstDocUrl(vararg docTypes: String): String? {
-            return media.firstOrNull { it.mediaType == "document" && it.documentType in docTypes }?.fileUrl
+            val allowed = docTypes.toSet()
+            return media.firstOrNull {
+                it.mediaType.equals("document", ignoreCase = true) &&
+                        !it.documentType.isNullOrBlank() &&
+                        allowed.contains(it.documentType)
+            }?.fileUrl
         }
 
+        // NOTE:
+        // LandDocuments has only 4 fields, so keep mapping strict.
+        // Full document-type tracking should come from media list in ViewModel.
         val docs = LandDocuments(
             saleDeed = firstDocUrl("sale_deed", "original_sale_deed"),
-            khataCertificate = firstDocUrl("khata_patta", "legal_heir_certificate", "joint_affidavit"),
-            encumbrance = firstDocUrl("encumbrance_certificate", "latest_tax_receipt"),
-            sellerIdentity = firstDocUrl(
-                "seller_identity_proof",
-                "aadhaar_pan",
-                "all_heirs_aadhaar",
-                "all_co_owner_aadhaar",
-                "consent_affidavit_all_heirs",
-                "death_certificate"
-            )
+            khataCertificate = firstDocUrl("khata_patta"),
+            encumbrance = firstDocUrl("encumbrance_certificate"),
+            sellerIdentity = firstDocUrl("aadhaar_pan", "seller_identity_proof")
         )
 
         return SellLandDraft(
@@ -102,13 +110,10 @@ object DraftMapper {
             "single_owner" -> "single_owner"
             "multi_owner" -> "multi_owner"
             "inherited_land" -> "inherited_land"
-
-            // legacy fallback
             "owner" -> "single_owner"
             "broker" -> "multi_owner"
             "power_of_attorney", "power of attorney", "power-of-attorney" -> "inherited_land"
             "other" -> "single_owner"
-
             else -> "single_owner"
         }
     }

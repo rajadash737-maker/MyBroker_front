@@ -1,18 +1,5 @@
 package com.example.myapplication.network
 
-import okhttp3.MultipartBody
-import okhttp3.RequestBody
-import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.Multipart
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Part
-import retrofit2.http.Path
-import retrofit2.http.Query
-import retrofit2.http.DELETE
-
 import com.example.myapplication.ui.feature.sell_land.model.BoundaryRequest
 import com.example.myapplication.ui.feature.sell_land.model.CancelListingRequest
 import com.example.myapplication.ui.feature.sell_land.model.CancelListingResponse
@@ -28,6 +15,18 @@ import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellerOfferActionResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellerOfferListResponse
 import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.Multipart
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Part
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiService {
 
@@ -60,7 +59,9 @@ interface ApiService {
 
     @Multipart
     @POST("users/me/profile-photo")
-    suspend fun uploadProfilePhoto(@Part file: MultipartBody.Part): Response<ProfilePhotoResponse>
+    suspend fun uploadProfilePhoto(
+        @Part file: MultipartBody.Part
+    ): Response<ProfilePhotoResponse>
 
     @POST("sell-land/draft")
     suspend fun saveDraft(
@@ -81,12 +82,6 @@ interface ApiService {
         @Part file: MultipartBody.Part
     ): Response<SellLandMediaResponse>
 
-    @DELETE("sell-land/{id}/media/{media_id}")
-    suspend fun deleteListingMedia(
-        @Path("id") id: Int,
-        @Path("media_id") mediaId: Int
-    ): Response<DeleteMediaResponse>
-
     @Multipart
     @POST("sell-land/{id}/documents")
     suspend fun uploadDocument(
@@ -94,6 +89,17 @@ interface ApiService {
         @Part("document_type") documentType: RequestBody,
         @Part file: MultipartBody.Part
     ): Response<SellLandMediaResponse>
+
+    @GET("sell-land/{id}/media")
+    suspend fun getListingMedia(
+        @Path("id") id: Int
+    ): Response<List<SellLandMediaResponse>>
+
+    @DELETE("sell-land/{id}/media/{media_id}")
+    suspend fun deleteListingMedia(
+        @Path("id") id: Int,
+        @Path("media_id") mediaId: Int
+    ): Response<DeleteMediaResponse>
 
     @POST("sell-land/payments/initiate")
     suspend fun initiatePayment(@Body body: PaymentInitRequest): Response<PaymentResponse>
@@ -103,9 +109,6 @@ interface ApiService {
 
     @POST("sell-land/{id}/submit")
     suspend fun submit(@Path("id") id: Int): Response<SubmitResponse>
-
-    @GET("sell-land/{id}/media")
-    suspend fun getListingMedia(@Path("id") id: Int): Response<List<SellLandMediaResponse>>
 
     @GET("sell-land/me")
     suspend fun getMyListings(): Response<List<SellLandResponse>>
@@ -121,8 +124,6 @@ interface ApiService {
         @Path("id") id: Int,
         @Body body: CancelListingRequest
     ): Response<CancelListingResponse>
-
-    // ---------------- SELLER OFFER ACTIONS ----------------
 
     @GET("sell-land/{id}/offers")
     suspend fun getListingOffers(@Path("id") id: Int): Response<SellerOfferListResponse>
@@ -150,5 +151,4 @@ interface ApiService {
     suspend fun getDocumentRequirements(
         @Query("ownership_type") ownershipType: String? = null
     ): Response<List<DocumentRequirementsResponse>>
-
 }

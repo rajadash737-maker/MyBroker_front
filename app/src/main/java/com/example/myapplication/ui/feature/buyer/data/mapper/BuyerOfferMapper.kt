@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.feature.buyer.data.mapper
 
-
-
 import com.example.myapplication.ui.feature.buyer.data.remote.dto.BuyerOfferActionResponseDto
 import com.example.myapplication.ui.feature.buyer.data.remote.dto.BuyerOfferItemDto
 import com.example.myapplication.ui.feature.buyer.data.remote.dto.BuyerOfferListResponseDto
@@ -15,14 +13,17 @@ fun BuyerOfferListResponseDto.toDomain(): List<BuyerOffer> {
 }
 
 fun BuyerOfferItemDto.toDomain(): BuyerOffer {
+    val normalizedBookingStatus = bookingStatus.trim().lowercase()
+    val normalizedOfferStatus = offerStatus.trim().lowercase()
+
     return BuyerOffer(
         offerId = offerId,
         requestId = requestId,
         offeredAmount = offeredAmount,
         counterAmount = counterAmount,
         finalAmount = finalAmount,
-        offerStatus = offerStatus,
-        bookingStatus = bookingStatus,
+        offerStatus = normalizedOfferStatus,
+        bookingStatus = normalizedBookingStatus,
         statusLabel = statusLabel,
         isBookWindowActive = isBookWindowActive,
         offerLockExpiresAt = offerLockExpiresAt,
@@ -55,8 +56,8 @@ fun BuyerOfferActionResponseDto.toDomain(): BuyerOfferActionResult {
         status = status,
         requestId = requestId,
         offerId = offerId,
-        offerStatus = offerStatus,
-        bookingStatus = bookingStatus,
+        offerStatus = offerStatus.trim().lowercase(),
+        bookingStatus = bookingStatus.trim().lowercase(),
         offerLockExpiresAt = offerLockExpiresAt
     )
 }
