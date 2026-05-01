@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.feature.sell_land.model.OfferModel
 import com.example.myapplication.ui.feature.sell_land.status.OfferStatus
@@ -124,9 +126,13 @@ fun OfferCard(
 
                     OutlinedTextField(
                         value = counterAmount,
-                        onValueChange = { counterAmount = it },
+                        onValueChange = { value ->
+                            // Keep only numeric input
+                            counterAmount = value.filter { ch -> ch.isDigit() }
+                        },
                         label = { Text("Enter Counter Amount") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -171,3 +177,4 @@ fun OfferStatusBadge(status: OfferStatus) {
         )
     }
 }
+

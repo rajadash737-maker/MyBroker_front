@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +34,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import com.example.myapplication.network.ApiClient
 import com.example.myapplication.network.UpdateProfileRequest
+import com.example.myapplication.ui.feature.common.NoInternetContent
+import com.example.myapplication.ui.feature.common.rememberIsConnected
 import com.example.myapplication.utils.DateUtils
 import kotlinx.coroutines.launch
 
@@ -60,6 +63,9 @@ fun EditProfileScreen(
     onBackClick: () -> Unit = {}
 ) {
 
+    val isConnected by rememberIsConnected()
+    var retryTick by remember { mutableStateOf(0) }
+
     val scroll = rememberScrollState()
 
     var fullName by remember { mutableStateOf("") }
@@ -85,10 +91,18 @@ fun EditProfileScreen(
         ApiClient.apiService
     }
 
+    if (!isConnected) {
+        NoInternetContent(
+            onRetry = { retryTick++ },
+            modifier = Modifier.fillMaxSize()
+        )
+        return
+    }
 
 
     // ----------------- AUTO LOAD PROFILE FROM BACKEND -----------------
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isConnected, retryTick) {
+        if (!isConnected) return@LaunchedEffect
         try {
             val res = api.getMyProfile()
             val err = res.errorBody()?.string()
@@ -116,8 +130,8 @@ fun EditProfileScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scroll)
-            .background(Color(0xFFF2F2F8))
-            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
 
         ProfileImageSection(
@@ -129,13 +143,13 @@ fun EditProfileScreen(
 
 
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        ProfileInputField("Full Name", fullName) { fullName = it }
-        ProfileInputField("Username", userName) { userName = it }
-        ProfileInputField("Email", email) { email = it }
-        ProfileInputField("Mobile Number", mobile) { mobile = it }
-        ProfileInputField("Address", address) { address = it }
+        ProfileInputField(stringResource(id = R.string.edit_profile_full_name), fullName) { fullName = it }
+        ProfileInputField(stringResource(id = R.string.edit_profile_username), userName) { userName = it }
+        ProfileInputField(stringResource(id = R.string.edit_profile_email), email) { email = it }
+        ProfileInputField(stringResource(id = R.string.edit_profile_mobile_number), mobile) { mobile = it }
+        ProfileInputField(stringResource(id = R.string.edit_profile_address), address) { address = it }
         DobField(
             value = dob,
             onClick = {
@@ -146,17 +160,22 @@ fun EditProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text("Gender", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            stringResource(id = R.string.edit_profile_gender),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            GenderOption("Male", gender) { gender = it }
+            GenderOption(stringResource(id = R.string.gender_male), gender) { gender = it }
             Spacer(modifier = Modifier.width(10.dp))
-            GenderOption("Female", gender) { gender = it }
+            GenderOption(stringResource(id = R.string.gender_female), gender) { gender = it }
             Spacer(modifier = Modifier.width(10.dp))
-            GenderOption("Other", gender) { gender = it }
+            GenderOption(stringResource(id = R.string.gender_other), gender) { gender = it }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // ---------------- DOB CALENDAR PICKER ----------------
         if (showDobPicker) {
@@ -215,10 +234,10 @@ fun EditProfileScreen(
                 .height(54.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6A5AE0)
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text("Save Changes", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(id = R.string.edit_profile_save_changes), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -315,7 +334,7 @@ fun ProfileImageSection(
         Spacer(Modifier.height(8.dp))
 
         TextButton(onClick = { launcher.launch("image/*") }) {
-            Text("Change Photo")
+            Text(stringResource(id = R.string.edit_profile_change_photo))
         }
     }
 }
@@ -333,7 +352,7 @@ fun ProfileInputField(label: String, value: String, onValueChange: (String) -> U
             .padding(vertical = 6.dp),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
@@ -348,7 +367,7 @@ fun ProfileInputField(label: String, value: String, onValueChange: (String) -> U
                 text = label,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF4A4A4A)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -359,18 +378,17 @@ fun ProfileInputField(label: String, value: String, onValueChange: (String) -> U
                 onValueChange = onValueChange,
                 singleLine = true,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 6.dp),
+                    .fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color(0xFF6A5AE0),
-                    unfocusedIndicatorColor = Color.Transparent
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 textStyle = TextStyle(
                     fontSize = 16.sp,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium
                 )
             )
@@ -395,26 +413,30 @@ fun DobField(
             .padding(vertical = 6.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
             modifier = Modifier.padding(14.dp)
         ) {
             Text(
-                text = "Date of Birth (DD/MM/YYYY)",
+                text = stringResource(id = R.string.edit_profile_dob_label),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF4A4A4A)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = if (value.isBlank()) "Select date" else value,
+                text = if (value.isBlank()) stringResource(id = R.string.edit_profile_select_date) else value,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (value.isBlank()) Color.Gray else Color.Black
+                color = if (value.isBlank()) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         }
     }

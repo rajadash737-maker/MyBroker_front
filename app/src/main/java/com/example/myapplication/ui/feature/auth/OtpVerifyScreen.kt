@@ -2,6 +2,7 @@ package com.example.myapplication.ui.feature.auth
 
 //package com.example.myapplication.ui.theme
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -11,24 +12,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 //import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.myapplication.network.ApiClient
-import com.example.myapplication.network.VerifyOtpRequest
-import kotlinx.coroutines.launch
+import com.example.myapplication.utils.normalizeMobile
 
 @Composable
 fun OtpVerifyScreen(navController: NavController, mobile: String) {
 
     val context = LocalContext.current
-    val api = ApiClient.apiService
-    val scope = rememberCoroutineScope()
+    val activity = context as? Activity
+    ApiClient.init(context.applicationContext)
+    val otpViewModel: FirebaseOtpViewModel = viewModel()
+    val otpState by otpViewModel.uiState.collectAsState()
 
-    var otp by remember { mutableStateOf("") }
-    var loading by remember { mutableStateOf(false) }
-
-    fun normalizeMobile(input: String): String {
-        val v = input.trim().removePrefix("+")
-        return if (v.length == 10 && v.all { it.isDigit() }) "91$v" else v
+    LaunchedEffect(mobile) {
+        otpViewModel.updateMobile(mobile.filter { it.isDigit() })
+    }
+    LaunchedEffect(otpState.message) {
+        val msg = otpState.message ?: return@LaunchedEffect
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        otpViewModel.clearMessage()
+    }
+    LaunchedEffect(otpState.otpVerified) {
+        if (otpState.otpVerified) {
+            navController.navigate("reset_password?mobile=${normalizeMobile(mobile)}")
+        }
     }
 
     Column(
@@ -40,46 +49,21 @@ fun OtpVerifyScreen(navController: NavController, mobile: String) {
         Text("Enter OTP")
 
         OutlinedTextField(
-            value = otp,
-            onValueChange = { otp = it },
+            value = otpState.otp,
+            onValueChange = { otpViewModel.updateOtp(it.filter { ch -> ch.isDigit() }) },
             label = { Text("OTP") }
         )
 
         Button(
             onClick = {
-                if (otp.isEmpty()) {
-                    Toast.makeText(context, "Enter OTP", Toast.LENGTH_SHORT).show()
+                if (activity == null) {
+                    Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-
-                scope.launch {
-                    loading = true
-                    try {
-                        val res = api.verifyOtp(
-                            VerifyOtpRequest(
-                                mobile = normalizeMobile(mobile),
-                                otp = otp.trim(),
-                                purpose = "forgot_password"
-                            )
-                        )
-
-                        val status = res.body()?.status
-                        if (res.isSuccessful && status == "OTP verified") {
-                            Toast.makeText(context, "OTP Verified", Toast.LENGTH_SHORT).show()
-                            navController.navigate("reset_password?mobile=${normalizeMobile(mobile)}")
-                        } else {
-                            Toast.makeText(context, status ?: "Invalid OTP", Toast.LENGTH_SHORT).show()
-                        }
-
-                    } catch (e: Exception) {
-                        Toast.makeText(context, e.message ?: "Network error", Toast.LENGTH_SHORT).show()
-                    } finally {
-                        loading = false
-                    }
-                }
+                otpViewModel.verifyOtp("forgot_password")
             }
         ) {
-            Text(if (loading) "Please wait..." else "Verify OTP")
+            Text(if (otpState.loading) "Please wait..." else "Verify OTP")
         }
     }
 }

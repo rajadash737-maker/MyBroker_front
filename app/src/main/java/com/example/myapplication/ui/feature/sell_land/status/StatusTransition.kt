@@ -18,7 +18,7 @@ object StatusTransition {
                 target == ListingStatus.LIVE || target == ListingStatus.NEEDS_CORRECTION
 
             ListingStatus.LIVE ->
-                target == ListingStatus.SOLD || target == ListingStatus.PROCESSING_REFUND
+                target == ListingStatus.BOOKED || target == ListingStatus.SOLD || target == ListingStatus.PROCESSING_REFUND
 
             ListingStatus.NEEDS_CORRECTION ->
                 target == ListingStatus.UNDER_REVIEW || target == ListingStatus.DRAFT
@@ -27,6 +27,9 @@ object StatusTransition {
                 target == ListingStatus.REFUND_SUCCESSFUL
 
             ListingStatus.REFUND_SUCCESSFUL ->
+                false
+
+            ListingStatus.BOOKED ->
                 false
 
             ListingStatus.SOLD ->

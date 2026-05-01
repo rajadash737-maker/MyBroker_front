@@ -9,6 +9,7 @@ data class SellLandResponse(
     @SerializedName("title") val title: String? = null,
     @SerializedName("owner_name") val ownerName: String? = null,
     @SerializedName("owner_mobile") val ownerMobile: String? = null,
+    @SerializedName("owner_category") val ownerCategory: String? = null,
     @SerializedName("land_type") val landType: String,
     @SerializedName("ownership_type") val ownershipType: String,
     @SerializedName("location") val location: String? = null,
@@ -39,12 +40,25 @@ data class SellLandResponse(
     @SerializedName("can_cancel_listing") val canCancelListing: Boolean = false,
     @SerializedName("likes_count") val likesCount: Int = 0,
     @SerializedName("offer_count") val offerCount: Int = 0,
+    @SerializedName("deal_amount") val dealAmount: Double? = null,
+    @SerializedName("booking_status") val bookingStatus: String? = null,
+    @SerializedName("registry_date") val registryDate: String? = null,
+    @SerializedName("registry_time") val registryTime: String? = null,
+    @SerializedName("registry_location") val registryLocation: String? = null,
+    @SerializedName("registry_proofs") val registryProofs: List<RegistryProofDto> = emptyList(),
     @SerializedName("images") val images: List<String>? = null,
     @SerializedName("profile_image_url") val profileImageUrl: String? = null,
     @SerializedName("tracking") val tracking: TrackingDto? = null,
     @SerializedName("required_document_types") val requiredDocumentTypes: List<String> = emptyList(),
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String
+)
+
+data class RegistryProofDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("file_url") val fileUrl: String,
+    @SerializedName("file_name") val fileName: String,
+    @SerializedName("created_at") val createdAt: String
 )
 
 data class DocumentRequirementsResponse(
@@ -84,6 +98,18 @@ data class PaymentResponse(
     @SerializedName("provider_ref") val providerRef: String? = null,
     @SerializedName("paid_at") val paidAt: String? = null,
     @SerializedName("created_at") val createdAt: String
+)
+
+data class SellLandRazorpayOrderResponse(
+    @SerializedName("order_id") val orderId: String,
+    @SerializedName("amount") val amount: Long,
+    @SerializedName("currency") val currency: String
+)
+
+data class SellLandRazorpayVerifyResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("order_id") val orderId: String,
+    @SerializedName("payment_id") val paymentId: String
 )
 
 data class SubmitResponse(

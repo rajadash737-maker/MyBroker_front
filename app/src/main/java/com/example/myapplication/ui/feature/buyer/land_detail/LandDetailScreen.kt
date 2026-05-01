@@ -29,6 +29,8 @@ import com.example.myapplication.ui.feature.buyer.land_detail.components.BottomA
 import com.example.myapplication.ui.feature.buyer.land_detail.components.ImageSlider
 import com.example.myapplication.ui.feature.buyer.land_detail.components.LandInfoSection
 import com.example.myapplication.ui.feature.buyer.land_detail.components.MapPreviewSection
+import com.example.myapplication.network.SessionManager
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun LandDetailScreen(
@@ -40,6 +42,8 @@ fun LandDetailScreen(
     val state by viewModel.uiState.collectAsState()
     var showOfferDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context.applicationContext) }
 
     LaunchedEffect(landId) {
         viewModel.loadLand(landId)
@@ -58,16 +62,27 @@ fun LandDetailScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             state.land?.let { land ->
-                BottomActionBar(
-                    isOfferLocked = land.isOfferLocked,
-                    offerLockExpiresAt = land.offerLockExpiresAt,
-                    onBookClick = { onBookNowClick(land.id) },
-                    onOfferClick = {
-                        if (!land.isOfferLocked) {
-                            showOfferDialog = true
+                val currentUserId = sessionManager.getUserId() ?: 0
+                val isOwner = currentUserId > 0 && land.sellerUserId == currentUserId
+                if (!isOwner) {
+                    BottomActionBar(
+                        isOfferLocked = land.isOfferLocked,
+                        offerLockExpiresAt = land.offerLockExpiresAt,
+                        onBookClick = { onBookNowClick(land.id) },
+                        onOfferClick = {
+                            if (!land.isOfferLocked) {
+                                showOfferDialog = true
+                            }
                         }
-                    }
-                )
+                    )
+                } else {
+                    Text(
+                        text = "This is your listing",
+                        modifier = Modifier
+                            .padding(16.dp),
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     ) { padding ->
@@ -100,7 +115,9 @@ fun LandDetailScreen(
         }
     }
 
-    if (showOfferDialog && state.land?.isOfferLocked != true) {
+    val currentUserId = sessionManager.getUserId() ?: 0
+    val isOwner = state.land?.sellerUserId?.let { it == currentUserId && currentUserId > 0 } == true
+    if (showOfferDialog && state.land?.isOfferLocked != true && !isOwner) {
         AlertDialog(
             onDismissRequest = { showOfferDialog = false },
             title = { Text("Make Offer") },

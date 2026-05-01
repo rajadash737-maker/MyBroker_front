@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -16,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,11 +26,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.R
+import com.example.myapplication.ui.feature.common.NoInternetContent
+import com.example.myapplication.ui.feature.common.rememberIsConnected
+import com.example.myapplication.ui.feature.home.profile.LocalThemeViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -37,10 +45,9 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.format.DateTimeParseException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun MapScreen(
@@ -51,13 +58,32 @@ fun MapScreen(
     val lands = viewModel.lands
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
+    val isConnected by rememberIsConnected()
 
     var selectedLand by remember { mutableStateOf<MapLand?>(null) }
     var mapType by remember { mutableStateOf(MapType.NORMAL) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val themeViewModel = LocalThemeViewModel.current
+    val isDarkTheme by themeViewModel.isDark.collectAsState(initial = isSystemInDarkTheme())
+    val mapStyle = remember(isDarkTheme) {
+        if (!isDarkTheme) return@remember null
+        runCatching {
+            MapStyleOptions.loadRawResourceStyle(context, R.raw.map_dark)
+        }.getOrNull()
+    }
+    val colors = MaterialTheme.colorScheme
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(20.2961, 85.8245), 15f)
+    }
+
+    if (!isConnected) {
+        NoInternetContent(
+            onRetry = { viewModel.loadMapData() },
+            modifier = Modifier.fillMaxSize()
+        )
+        return
     }
 
     LaunchedEffect(focusLandId, lands.size) {
@@ -75,16 +101,19 @@ fun MapScreen(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(mapType = mapType)
+            properties = MapProperties(
+                mapType = mapType,
+                mapStyleOptions = if (mapType == MapType.NORMAL) mapStyle else null
+            )
         ) {
             lands.forEach { land ->
                 if (land.polygonPoints.size < 3) return@forEach
 
                 val fillColor = when (land.status) {
-                    LandStatus.AVAILABLE -> Color(0x5532CD32)
-                    LandStatus.TEMP_LOCK -> Color(0x55FF7043) // lock color
-                    LandStatus.BOOKED -> Color(0x55007BFF)
-                    LandStatus.SOLD -> Color(0x55FF0000)
+                    LandStatus.AVAILABLE -> colors.primary.copy(alpha = 0.35f)
+                    LandStatus.TEMP_LOCK -> colors.tertiary.copy(alpha = 0.35f)
+                    LandStatus.BOOKED -> colors.secondary.copy(alpha = 0.35f)
+                    LandStatus.SOLD -> colors.error.copy(alpha = 0.35f)
                 }
 
                 val center = getPolygonCenter(land)
@@ -161,18 +190,19 @@ fun MapScreen(
                     .align(Alignment.BottomCenter)
                     .padding(16.dp)
                     .fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(8.dp)
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.surface)
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("₹${land.price}", fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
-                    Text("${land.area} sqft")
+                    Text("₹${land.price}", fontSize = 20.sp, color = colors.primary)
+                    Text("${land.area} sqft", color = colors.onSurfaceVariant)
                     Text(
                         land.status.name,
                         color = when (land.status) {
-                            LandStatus.AVAILABLE -> Color(0xFF2E7D32)
-                            LandStatus.TEMP_LOCK -> Color(0xFFE64A19)
-                            LandStatus.BOOKED -> Color(0xFF1565C0)
-                            LandStatus.SOLD -> Color(0xFFC62828)
+                            LandStatus.AVAILABLE -> colors.primary
+                            LandStatus.TEMP_LOCK -> colors.tertiary
+                            LandStatus.BOOKED -> colors.secondary
+                            LandStatus.SOLD -> colors.error
                         }
                     )
 
@@ -180,7 +210,7 @@ fun MapScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = formatLockRemaining(land.offerLockExpiresAt) ?: "Temporarily locked",
-                            color = Color(0xFFE64A19)
+                            color = colors.tertiary
                         )
                     }
 
@@ -204,18 +234,31 @@ fun getPolygonCenter(land: MapLand): LatLng {
 
 private fun formatLockRemaining(expiresAt: String?): String? {
     if (expiresAt.isNullOrBlank()) return null
-    return try {
-        val expiry = OffsetDateTime.parse(expiresAt).toInstant()
-        val now = Instant.now()
-        val diff = Duration.between(now, expiry)
-        if (diff.isNegative || diff.isZero) {
-            "Lock expired"
-        } else {
-            val h = diff.toHours()
-            val m = diff.toMinutes() % 60
-            "Lock: ${h}h ${m}m left"
-        }
-    } catch (_: DateTimeParseException) {
-        null
-    }
+    val expiryMillis = parseIsoToMillis(expiresAt) ?: return null
+    val nowMillis = System.currentTimeMillis()
+    val diff = expiryMillis - nowMillis
+    if (diff <= 0L) return "Lock expired"
+    val h = diff / (1000 * 60 * 60)
+    val m = (diff / (1000 * 60)) % 60
+    return "Lock: ${h}h ${m}m left"
 }
+
+private fun parseIsoToMillis(raw: String?): Long? {
+    if (raw.isNullOrBlank()) return null
+    val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        "yyyy-MM-dd'T'HH:mm:ss"
+    )
+    patterns.forEach { pattern ->
+        runCatching {
+            val sdf = SimpleDateFormat(pattern, Locale.US)
+            if (pattern == "yyyy-MM-dd'T'HH:mm:ss") {
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+            }
+            sdf.parse(raw)?.time
+        }.getOrNull()?.let { return it }
+    }
+    return null
+}
+

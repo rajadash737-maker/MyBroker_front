@@ -2,14 +2,20 @@ package com.example.myapplication.ui.feature.sell_land.screens
 
 
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import com.example.myapplication.BuildConfig
 import com.example.myapplication.ui.feature.sell_land.components.SellLandTopBar
+import com.example.myapplication.ui.feature.buyer.payment.RazorpayPaymentBus
 import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewModel
+import com.razorpay.Checkout
+import org.json.JSONObject
+import java.text.DecimalFormat
 
 @Composable
 fun PaymentScreen(
@@ -17,17 +23,65 @@ fun PaymentScreen(
     onBack: () -> Unit,
     onSubmitSuccess: () -> Unit
 ) {
-    val listingFee = 999
-
-    var selectedMethod by remember { mutableStateOf("upi") }
+    val listingFee by viewModel.paymentRequiredAmount.collectAsState()
+    val orderId by viewModel.sellerOrderId.collectAsState()
+    val orderAmount by viewModel.sellerOrderAmount.collectAsState()
+    val orderCurrency by viewModel.sellerOrderCurrency.collectAsState()
+    val paymentError by viewModel.paymentError.collectAsState()
+    val paymentCompleted by viewModel.paymentCompleted.collectAsState()
 
     val submitResult by viewModel.submitResult.collectAsState()
     val loading by viewModel.loading.collectAsState()
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshPaymentRequiredAmount()
+    }
 
     LaunchedEffect(submitResult?.requestId) {
         if (submitResult != null) {
             onSubmitSuccess()
             viewModel.clearSubmitResult()
+            viewModel.clearPaymentState()
+        }
+    }
+
+    LaunchedEffect(paymentCompleted) {
+        if (paymentCompleted) {
+            viewModel.clearPaymentState()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        RazorpayPaymentBus.events.collect { result ->
+            if (result.success) {
+                viewModel.onSellerPaymentSuccess(result.paymentId, result.orderId, result.signature)
+            } else {
+                viewModel.onSellerPaymentFailure(result.errorMessage)
+            }
+        }
+    }
+
+    LaunchedEffect(orderId, orderAmount) {
+        if (!orderId.isNullOrBlank() && orderAmount != null) {
+            if (activity == null) {
+                viewModel.onSellerPaymentFailure("Unable to launch payment screen. Please retry.")
+                return@LaunchedEffect
+            }
+            try {
+                val options = JSONObject()
+                options.put("name", "MyBroker")
+                options.put("description", "Listing fee payment")
+                options.put("order_id", orderId)
+                options.put("currency", orderCurrency ?: "INR")
+                options.put("amount", orderAmount)
+                val checkout = Checkout()
+                checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
+                checkout.open(activity, options)
+            } catch (e: Exception) {
+                viewModel.onSellerPaymentFailure(e.message ?: "Unable to open payment screen")
+            }
         }
     }
 
@@ -64,70 +118,48 @@ fun PaymentScreen(
                     ) {
                         Text("Sell Land Listing")
                         Text(
-                            text = "₹$listingFee",
+                            text = listingFee?.let { "₹${DecimalFormat("#,##0.##").format(it)}" } ?: "Loading...",
                             style = MaterialTheme.typography.headlineSmall
                         )
                     }
                 }
 
                 Text(
-                    text = "Payment Method",
+                    text = "Pay securely with Razorpay",
                     style = MaterialTheme.typography.titleMedium
-                )
-
-                PaymentOption(
-                    title = "UPI",
-                    selected = selectedMethod == "upi",
-                    onSelect = { selectedMethod = "upi" }
-                )
-                PaymentOption(
-                    title = "Debit / Credit Card",
-                    selected = selectedMethod == "debit_credit_card",
-                    onSelect = { selectedMethod = "debit_credit_card" }
-                )
-                PaymentOption(
-                    title = "Net Banking",
-                    selected = selectedMethod == "net_banking",
-                    onSelect = { selectedMethod = "net_banking" }
                 )
 
             }
 
             Button(
                 onClick = {
-                    viewModel.initiatePayment(selectedMethod) { paymentId ->
-                        viewModel.markPaidThenSubmit(paymentId)
-                    }
+                    viewModel.createSellerRazorpayOrder()
                 },
-                enabled = !loading,
+                enabled = !loading && listingFee != null,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (loading) "Processing..." else "Pay ₹$listingFee")
+                val feeLabel = listingFee?.let { "₹${DecimalFormat("#,##0.##").format(it)}" } ?: "..."
+                Text(if (loading) "Processing..." else "Pay $feeLabel")
+            }
+
+            val errorText = paymentError
+            if (!errorText.isNullOrBlank()) {
+                Text(
+                    text = errorText,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.createSellerRazorpayOrder() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !loading
+                ) {
+                    Text("Retry Payment")
+                }
             }
 
         }
     }
 }
 
-@Composable
-fun PaymentOption(
-    title: String,
-    selected: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = selected,
-                onClick = onSelect
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(title)
-        }
-    }
-}

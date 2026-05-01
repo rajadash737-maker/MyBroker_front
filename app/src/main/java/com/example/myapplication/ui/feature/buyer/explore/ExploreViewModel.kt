@@ -2,18 +2,21 @@ package com.example.myapplication.ui.feature.buyer.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.network.ConnectivityObserver
 import com.example.myapplication.ui.feature.buyer.domain.repository.LandRepository
 import com.example.myapplication.ui.feature.buyer.domain.repository.WishlistRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ExploreViewModel(
     private val landRepository: LandRepository,
     private val wishlistRepository: WishlistRepository,
+    private val connectivityObserver: ConnectivityObserver,
     private val showWishlistOnly: Boolean = false
 ) : ViewModel() {
 
@@ -27,7 +30,7 @@ class ExploreViewModel(
     private var searchJob: Job? = null
 
     init {
-        fetchExploreLands(reset = true)
+        observeConnectivity()
     }
 
     fun onEvent(event: ExploreEvent) {
@@ -58,6 +61,10 @@ class ExploreViewModel(
                 fetchExploreLands(reset = true)
             }
 
+            ExploreEvent.OnRetry -> {
+                fetchExploreLands(reset = true)
+            }
+
             ExploreEvent.OnLoadMore -> {
                 fetchExploreLands(reset = false)
             }
@@ -73,6 +80,21 @@ class ExploreViewModel(
     }
 
     private fun fetchExploreLands(reset: Boolean) {
+        if (!_uiState.value.isConnected) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    isLoadingMore = false,
+                    errorMessage = null,
+                    lands = emptyList(),
+                    hasMore = true,
+                    nextSkip = 0
+                )
+            }
+            return
+        }
+
         val state = _uiState.value
         if (!reset && (state.isLoading || state.isLoadingMore || !state.hasMore)) return
 
@@ -130,6 +152,30 @@ class ExploreViewModel(
                         isLoadingMore = false,
                         errorMessage = e.message ?: "Failed to load lands"
                     )
+                }
+            }
+        }
+    }
+
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivityObserver.isConnected.collectLatest { isConnected ->
+                _uiState.update { it.copy(isConnected = isConnected) }
+
+                if (!isConnected) {
+                    _uiState.update {
+                        it.copy(
+                            lands = emptyList(),
+                            isLoading = false,
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            errorMessage = null,
+                            hasMore = true,
+                            nextSkip = 0
+                        )
+                    }
+                } else if (_uiState.value.lands.isEmpty() && !_uiState.value.isLoading) {
+                    fetchExploreLands(reset = true)
                 }
             }
         }

@@ -81,7 +81,8 @@ object DraftMapper {
             sellerDetails = SellerDetails(
                 name = res.ownerName.orEmpty(),
                 mobile = res.ownerMobile.orEmpty(),
-                sellerType = normalizeOwnershipType(res.ownershipType)
+                sellerType = normalizeOwnershipType(res.ownershipType),
+                sellerCategory = normalizeSellerCategory(res.ownerCategory)
             ),
             landDetails = LandDetails(
                 title = res.title.orEmpty(),
@@ -115,6 +116,16 @@ object DraftMapper {
             "power_of_attorney", "power of attorney", "power-of-attorney" -> "inherited_land"
             "other" -> "single_owner"
             else -> "single_owner"
+        }
+    }
+
+    private fun normalizeSellerCategory(value: String?): String {
+        return when (value?.trim()?.lowercase()) {
+            "general" -> "general"
+            "obc" -> "obc"
+            "sc" -> "sc"
+            "st" -> "st"
+            else -> "general"
         }
     }
 

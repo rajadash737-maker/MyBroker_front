@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -35,9 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.R
 import com.example.myapplication.ui.feature.buyer.explore.components.FilterBottomSheet
 import com.example.myapplication.ui.feature.buyer.explore.components.LandCard
+import com.example.myapplication.ui.feature.common.PullToRefreshBox
 
 @Composable
 fun ExploreScreen(
@@ -50,7 +54,6 @@ fun ExploreScreen(
 
     var showSortMenu by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             Column(
@@ -60,7 +63,7 @@ fun ExploreScreen(
                     .padding(16.dp)
             ) {
                 Text(
-                    text = if (isWishlistScreen) "My Wishlist" else "Explore Lands",
+                    text = if (isWishlistScreen) stringResource(id = R.string.explore_my_wishlist) else stringResource(id = R.string.explore_title),
                     style = MaterialTheme.typography.titleLarge
                 )
 
@@ -74,7 +77,7 @@ fun ExploreScreen(
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     placeholder = {
                         Text(
-                            if (isWishlistScreen) "Search liked lands..." else "Search land, city, state, pincode"
+                            if (isWishlistScreen) stringResource(id = R.string.explore_search_wishlist) else stringResource(id = R.string.explore_search_hint)
                         )
                     }
                 )
@@ -84,14 +87,14 @@ fun ExploreScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(
                         onClick = { showFilterSheet = true },
-                        label = { Text("Filters") },
+                        label = { Text(stringResource(id = R.string.explore_filters)) },
                         leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null) }
                     )
 
                     Box {
                         AssistChip(
                             onClick = { showSortMenu = true },
-                            label = { Text("Sort") },
+                            label = { Text(stringResource(id = R.string.explore_sort)) },
                             leadingIcon = { Icon(Icons.Default.Sort, contentDescription = null) }
                         )
                         DropdownMenu(
@@ -113,12 +116,21 @@ fun ExploreScreen(
             }
         }
     ) { padding ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.onEvent(ExploreEvent.OnRefresh) },
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
             when {
+                !state.isConnected -> {
+                    NoInternetContent(
+                        onRetry = { viewModel.onEvent(ExploreEvent.OnRetry) },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
                 state.isLoading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
@@ -126,7 +138,7 @@ fun ExploreScreen(
                 state.lands.isEmpty() -> {
                     Text(
                         text = state.errorMessage
-                            ?: if (isWishlistScreen) "No liked lands yet" else "No Lands Found",
+                            ?: if (isWishlistScreen) stringResource(id = R.string.explore_empty_wishlist) else stringResource(id = R.string.explore_empty),
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -182,6 +194,31 @@ fun ExploreScreen(
                     onDismiss = { showFilterSheet = false }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun NoInternetContent(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(id = R.string.common_no_internet),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(id = R.string.common_check_connection),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text(stringResource(id = R.string.common_retry))
         }
     }
 }

@@ -11,5 +11,6 @@ data class ExploreUiState(
     val selectedSort: SortType = SortType.LATEST,
     val isFilterOpen: Boolean = false,
     val currentFilter: LandFilter? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isConnected: Boolean = true
 )

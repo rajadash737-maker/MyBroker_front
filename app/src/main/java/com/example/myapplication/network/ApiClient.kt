@@ -2,6 +2,7 @@ package com.example.myapplication.network
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.example.myapplication.core.config.AppEnv
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -12,6 +13,7 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     private const val BASE_URL = AppEnv.BASE_URL
+    private const val TAG = "ApiClient"
 
     @Volatile
     private var initialized = false
@@ -78,6 +80,8 @@ object ApiClient {
         if (initialized) return
 
         val sessionManager = SessionManager(context.applicationContext)
+
+        Log.i(TAG, "Initializing ApiClient with BASE_URL=$BASE_URL")
 
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY

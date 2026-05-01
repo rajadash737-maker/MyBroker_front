@@ -104,6 +104,7 @@ fun ReviewScreen(
                 Text(draft.sellerDetails?.name ?: "-")
                 Text(draft.sellerDetails?.mobile ?: "-")
                 Text(draft.sellerDetails?.sellerType ?: "-")
+                Text(draft.sellerDetails?.sellerCategory ?: "-")
             }
 
             ReviewSection(title = "Land Details", onEdit = onEditLand) {

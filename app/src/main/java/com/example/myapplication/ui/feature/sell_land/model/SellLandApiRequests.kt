@@ -6,6 +6,7 @@ data class SellLandDraftRequest(
     @SerializedName("title") val title: String? = null,
     @SerializedName("owner_name") val ownerName: String? = null,
     @SerializedName("owner_mobile") val ownerMobile: String? = null,
+    @SerializedName("owner_category") val ownerCategory: String? = null,
     @SerializedName("land_type") val landType: String? = null,
     @SerializedName("ownership_type") val ownershipType: String? = null,
     @SerializedName("location") val location: String? = null,
@@ -40,6 +41,16 @@ data class PaymentInitRequest(
 data class PaymentMarkPaidRequest(
     @SerializedName("payment_id") val paymentId: Int,
     @SerializedName("provider_ref") val providerRef: String? = null
+)
+
+data class SellLandRazorpayOrderRequest(
+    @SerializedName("request_id") val requestId: Int
+)
+
+data class SellLandRazorpayVerifyRequest(
+    @SerializedName("razorpay_order_id") val orderId: String,
+    @SerializedName("razorpay_payment_id") val paymentId: String,
+    @SerializedName("razorpay_signature") val signature: String
 )
 
 data class CancelListingRequest(

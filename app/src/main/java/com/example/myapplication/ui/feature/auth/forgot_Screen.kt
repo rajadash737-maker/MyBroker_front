@@ -1,11 +1,10 @@
 package com.example.myapplication.ui.feature.auth
 
-import com.example.myapplication.network.ApiClient
-
+import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,11 +23,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.myapplication.R
+import com.example.myapplication.network.ApiClient
 import com.example.myapplication.network.ResetPasswordRequest
-import com.example.myapplication.network.SendOtpRequest
-import com.example.myapplication.network.VerifyOtpRequest
 import kotlinx.coroutines.launch
 import com.example.myapplication.utils.normalizeMobile
 
@@ -37,17 +36,31 @@ import com.example.myapplication.utils.normalizeMobile
 fun ForgotPasswordScreen(navController: NavController) {
 
     val context = LocalContext.current
-    //val api = ApiClient.api
+    val activity = context as? Activity
+
+    ApiClient.init(context.applicationContext)
     val api = ApiClient.apiService
 
     val scope = rememberCoroutineScope()
+    val otpViewModel: FirebaseOtpViewModel = viewModel()
+    val otpState by otpViewModel.uiState.collectAsState()
 
-    var mobile by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
 
     var step by remember { mutableStateOf(1) } // 1 = enter mobile, 2 = enter otp, 3 = reset password
+
+    LaunchedEffect(otpState.message) {
+        val msg = otpState.message ?: return@LaunchedEffect
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        otpViewModel.clearMessage()
+    }
+    LaunchedEffect(otpState.otpSent) {
+        if (otpState.otpSent) step = 2
+    }
+    LaunchedEffect(otpState.otpVerified) {
+        if (otpState.otpVerified) step = 3
+    }
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -88,8 +101,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                 if (step == 1) {
 
                     OutlinedTextField(
-                        value = mobile,
-                        onValueChange = { mobile = it },
+                        value = otpState.mobile,
+                        onValueChange = { otpViewModel.updateMobile(it.filter { ch -> ch.isDigit() }) },
                         label = { Text("Mobile Number", color = Color.White) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -104,42 +117,17 @@ fun ForgotPasswordScreen(navController: NavController) {
 
                     Button(
                         onClick = {
-                            if (mobile.isEmpty()) {
-                                Toast.makeText(context, "Enter mobile number", Toast.LENGTH_SHORT).show()
+                            if (activity == null) {
+                                Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-
-                            //
-                            //SEND OTP
-                            //
-                            scope.launch {
-                                try {
-                                    val mobileNorm = normalizeMobile(mobile)
-                                    val res = api.sendOtp(
-                                        SendOtpRequest(
-                                            mobile = mobileNorm,
-                                            purpose = "forgot_password"
-                                        )
-                                    )
-                                    val status = res.body()?.status
-
-                                    if (res.isSuccessful && (status == "OTP sent" || status == "MSG91 not configured")) {
-                                        mobile = mobileNorm
-                                        step = 2
-                                        Toast.makeText(context, "OTP Sent", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, status ?: "Failed", Toast.LENGTH_SHORT).show()
-                                    }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, e.message ?: "Network error", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
+                            otpViewModel.sendOtp(activity, "forgot_password")
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !otpState.loading
                     ) {
-                        Text("Send OTP", color = Color.White)
+                        Text(if (otpState.loading) "Please wait..." else "Send OTP", color = Color.White)
                     }
                 }
 
@@ -150,8 +138,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                 if (step == 2) {
 
                     OutlinedTextField(
-                        value = otp,
-                        onValueChange = { otp = it },
+                        value = otpState.otp,
+                        onValueChange = { otpViewModel.updateOtp(it.filter { ch -> ch.isDigit() }) },
                         label = { Text("Enter OTP", color = Color.White) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
@@ -167,37 +155,32 @@ fun ForgotPasswordScreen(navController: NavController) {
 
                     Button(
                         onClick = {
-                            if (otp.isEmpty()) {
-                                Toast.makeText(context, "Enter OTP", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-
-                            scope.launch {
-                                try {
-                                    val res = api.verifyOtp(
-                                        VerifyOtpRequest(
-                                            mobile = normalizeMobile(mobile),
-                                            otp = otp.trim(),
-                                            purpose = "forgot_password"
-                                        )
-                                    )
-                                    val status = res.body()?.status
-
-                                    if (res.isSuccessful && status == "OTP verified") {
-                                        step = 3
-                                        Toast.makeText(context, "OTP Verified", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, status ?: "Invalid OTP", Toast.LENGTH_SHORT).show()
-                                    }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, e.message ?: "Network error", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
+                            otpViewModel.verifyOtp("forgot_password")
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !otpState.loading
                     ) {
-                        Text("Verify OTP", color = Color.White)
+                        Text(if (otpState.loading) "Please wait..." else "Verify OTP", color = Color.White)
+                    }
+
+                    if (otpState.otpSent && !otpState.otpVerified) {
+                        TextButton(
+                            onClick = {
+                                if (activity == null) {
+                                    Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
+                                    return@TextButton
+                                }
+                                otpViewModel.resendOtp(activity, "forgot_password")
+                            },
+                            enabled = otpState.canResend && !otpState.loading
+                        ) {
+                            val label = if (otpState.canResend) {
+                                "Resend OTP"
+                            } else {
+                                "Resend in ${otpState.resendSeconds}s"
+                            }
+                            Text(label, color = Color.White)
+                        }
                     }
 
                     TextButton(onClick = { step = 1 }) {
@@ -280,7 +263,7 @@ fun ForgotPasswordScreen(navController: NavController) {
                                 try {
                                     val res = api.resetPassword(
                                         ResetPasswordRequest(
-                                            mobile = normalizeMobile(mobile),
+                                            mobile = normalizeMobile(otpState.mobile),
                                             password = password,
                                             confirm = confirm
                                         )

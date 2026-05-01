@@ -28,6 +28,7 @@ import com.example.myapplication.ui.feature.sell_land.viewmodel.SellLandViewMode
 object SellLandRoutes {
     const val SELLER = "seller_details"
     const val SELLER_WITH_ID = "seller_details/{listingId}"
+    const val SELLER_LISTING_DETAIL = "seller_listing_detail/{listingId}"
     const val LAND = "land_details"
     const val MEDIA = "upload_media"
     const val MAP = "map_boundary"
@@ -37,6 +38,7 @@ object SellLandRoutes {
     const val SUCCESS = "success"
 
     fun sellerWithIdRoute(listingId: String) = "seller_details/$listingId"
+    fun sellerListingDetailRoute(listingId: String) = "seller_listing_detail/$listingId"
 }
 
 fun NavGraphBuilder.sellLandGraph(
@@ -173,6 +175,7 @@ fun NavGraphBuilder.sellLandGraph(
 
             SuccessScreen(
                 listingCode = submitResult?.listingCode,
+                listingId = submitResult?.requestId,
                 onGoHome = {
                     navController.navigate("home") {
                         popUpTo("home") { inclusive = true }
@@ -189,6 +192,19 @@ fun NavGraphBuilder.sellLandGraph(
         SellerListingsScreen(
             navController = navController,
             viewModel = vm
+        )
+    }
+
+    composable(
+        route = SellLandRoutes.SELLER_LISTING_DETAIL,
+        arguments = listOf(navArgument("listingId") { type = NavType.StringType })
+    ) { backStackEntry ->
+        val listingId = backStackEntry.arguments?.getString("listingId") ?: ""
+        val vm: SellLandViewModel = viewModel()
+        com.example.myapplication.ui.feature.sell_land.screens.SellerListingDetailScreen(
+            listingId = listingId,
+            viewModel = vm,
+            onBack = { navController.popBackStack() }
         )
     }
 

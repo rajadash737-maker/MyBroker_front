@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SuccessScreen(
     listingCode: String?,
+    listingId: Int?,
     onGoHome: () -> Unit
 ) {
     Scaffold { padding ->
@@ -39,7 +40,7 @@ fun SuccessScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Listing ID: ${listingCode ?: "Pending"}",
+                text = "Listing ID: ${listingId?.let { "LST-$it" } ?: listingCode ?: "Pending"}",
                 style = MaterialTheme.typography.titleMedium
             )
 

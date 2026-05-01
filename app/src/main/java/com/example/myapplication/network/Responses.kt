@@ -14,6 +14,12 @@ data class VerifyOtpRequest(
     val purpose: String = "signup"
 )
 
+data class FirebaseTokenRequest(
+    val id_token: String,
+    val mobile: String,
+    val purpose: String
+)
+
 data class SignupRequest(
     val fullname: String,
     val email: String,
@@ -75,6 +81,27 @@ data class UpdateProfileRequest(
 data class ProfilePhotoResponse(
     val status: String,
     @SerializedName("profile_image_url") val profileImageUrl: String
+)
+
+data class FcmTokenRequest(
+    val token: String
+)
+
+data class SocialLinksResponse(
+    val id: Int,
+    val whatsapp: String? = null,
+    val instagram: String? = null,
+    val telegram: String? = null,
+    val youtube: String? = null,
+    val facebook: String? = null,
+    val linkedin: String? = null
+)
+
+data class BannerResponse(
+    val id: Int,
+    @SerializedName("image_url") val imageUrl: String,
+    @SerializedName("sort_order") val sortOrder: Int,
+    @SerializedName("is_active") val isActive: Boolean
 )
 
 

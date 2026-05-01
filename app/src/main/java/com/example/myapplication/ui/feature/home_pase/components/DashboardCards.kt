@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -32,7 +33,7 @@ fun DashboardCards(navController: NavController) {
     ) {
 
         FeatureCard(
-            title = "Buy Land",
+            title = stringResource(id = R.string.home_buy_land),
             iconRes = R.drawable.ic_home_equal,
             bgColor = Color(0xFF1E88E5)
         ) {
@@ -40,7 +41,7 @@ fun DashboardCards(navController: NavController) {
         }
 
         FeatureCard(
-            title = "Sell Land",
+            title = stringResource(id = R.string.home_sell_land),
             iconRes = R.drawable.ic_money_equal,
             bgColor = Color(0xFF2E7D32)
         ) {

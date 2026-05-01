@@ -50,6 +50,24 @@ class SellLandViewModel : ViewModel() {
     private val _currentPaymentStatus = MutableStateFlow<String?>(null)
     val currentPaymentStatus: StateFlow<String?> = _currentPaymentStatus
 
+    private val _paymentRequiredAmount = MutableStateFlow<Double?>(null)
+    val paymentRequiredAmount: StateFlow<Double?> = _paymentRequiredAmount
+
+    private val _sellerOrderId = MutableStateFlow<String?>(null)
+    val sellerOrderId: StateFlow<String?> = _sellerOrderId
+
+    private val _sellerOrderAmount = MutableStateFlow<Long?>(null)
+    val sellerOrderAmount: StateFlow<Long?> = _sellerOrderAmount
+
+    private val _sellerOrderCurrency = MutableStateFlow<String?>(null)
+    val sellerOrderCurrency: StateFlow<String?> = _sellerOrderCurrency
+
+    private val _paymentError = MutableStateFlow<String?>(null)
+    val paymentError: StateFlow<String?> = _paymentError
+
+    private val _paymentCompleted = MutableStateFlow(false)
+    val paymentCompleted: StateFlow<Boolean> = _paymentCompleted
+
     private val _statusListings = MutableStateFlow<List<SellLandModel>>(emptyList())
     val statusListings: StateFlow<List<SellLandModel>> = _statusListings
 
@@ -154,6 +172,14 @@ class SellLandViewModel : ViewModel() {
         else -> "single_owner"
     }
 
+    private fun normalizeSellerCategory(value: String?): String = when (value?.trim()?.lowercase()) {
+        "general" -> "general"
+        "obc" -> "obc"
+        "sc" -> "sc"
+        "st" -> "st"
+        else -> "general"
+    }
+
     private fun requiredDocsForSellerType(rawSellerType: String?): Set<String> {
         return when (normalizeOwnershipType(rawSellerType)) {
             "multi_owner" -> setOf("sale_deed", "all_co_owner_aadhaar", "joint_affidavit", "encumbrance_certificate", "latest_tax_receipt")
@@ -201,6 +227,7 @@ class SellLandViewModel : ViewModel() {
                     title = d.landDetails?.title?.trim(),
                     ownerName = d.sellerDetails?.name?.trim(),
                     ownerMobile = d.sellerDetails?.mobile?.trim(),
+                    ownerCategory = normalizeSellerCategory(d.sellerDetails?.sellerCategory),
                     ownershipType = normalizeOwnershipType(d.sellerDetails?.sellerType),
                     landType = normalizeLandType(d.landDetails?.landType),
                     area = d.landDetails?.area?.toDoubleOrNull(),
@@ -371,6 +398,60 @@ class SellLandViewModel : ViewModel() {
         markPaymentPaid(paymentId, providerRef) { preSubmitCheck { submitListing() } }
     }
 
+    fun createSellerRazorpayOrder() {
+        val requestId = _currentRequestId.value ?: run {
+            _error.value = "Draft ID missing. Pehle draft save karo."
+            return
+        }
+        viewModelScope.launch {
+            _loading.value = true
+            _paymentError.value = null
+            remote.createRazorpayOrder(requestId)
+                .onSuccess {
+                    _sellerOrderId.value = it.orderId
+                    _sellerOrderAmount.value = it.amount
+                    _sellerOrderCurrency.value = it.currency
+                }
+                .onFailure { _paymentError.value = it.message ?: "Payment initiation failed" }
+            _loading.value = false
+        }
+    }
+
+    fun onSellerPaymentSuccess(paymentId: String?, orderId: String?, signature: String?) {
+        val resolvedOrderId = orderId ?: _sellerOrderId.value
+        if (paymentId.isNullOrBlank() || resolvedOrderId.isNullOrBlank() || signature.isNullOrBlank()) {
+            _paymentError.value = "Payment details missing. Please retry."
+            return
+        }
+        viewModelScope.launch {
+            _loading.value = true
+            _paymentError.value = null
+            remote.verifyRazorpayPayment(
+                orderId = resolvedOrderId,
+                paymentId = paymentId,
+                signature = signature
+            )
+                .onSuccess {
+                    _paymentCompleted.value = true
+                    preSubmitCheck { submitListing() }
+                }
+                .onFailure { _paymentError.value = it.message ?: "Payment verification failed" }
+            _loading.value = false
+        }
+    }
+
+    fun onSellerPaymentFailure(message: String?) {
+        _paymentError.value = message ?: "Payment failed. Please retry."
+    }
+
+    fun clearPaymentState() {
+        _paymentError.value = null
+        _paymentCompleted.value = false
+        _sellerOrderId.value = null
+        _sellerOrderAmount.value = null
+        _sellerOrderCurrency.value = null
+    }
+
     fun submitListing() {
         val requestId = _currentRequestId.value ?: run {
             _error.value = "Draft ID missing. Pehle draft save karo."
@@ -514,6 +595,7 @@ class SellLandViewModel : ViewModel() {
             detailResult
                 .onSuccess { detail ->
                     _currentPaymentStatus.value = detail.paymentStatus
+                    _paymentRequiredAmount.value = detail.paymentRequiredAmount
                     val media = mediaResult.getOrNull().orEmpty()
                     _draft.value = DraftMapper.fromExistingListing(detail, media)
                     applyMediaSnapshot(media)
@@ -521,6 +603,20 @@ class SellLandViewModel : ViewModel() {
                 .onFailure { ex -> _error.value = ex.message ?: "Failed to load listing" }
 
             _loading.value = false
+        }
+    }
+
+    fun refreshPaymentRequiredAmount() {
+        val requestId = _currentRequestId.value ?: return
+        viewModelScope.launch {
+            remote.getListingDetails(requestId)
+                .onSuccess { detail ->
+                    _currentPaymentStatus.value = detail.paymentStatus
+                    _paymentRequiredAmount.value = detail.paymentRequiredAmount
+                }
+                .onFailure { ex ->
+                    _error.value = ex.message ?: "Failed to load payment amount"
+                }
         }
     }
 

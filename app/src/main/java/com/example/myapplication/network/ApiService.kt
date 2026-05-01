@@ -9,12 +9,23 @@ import com.example.myapplication.ui.feature.sell_land.model.DocumentRequirements
 import com.example.myapplication.ui.feature.sell_land.model.PaymentInitRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentMarkPaidRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayOrderRequest
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayOrderResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayVerifyRequest
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayVerifyResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandDraftRequest
 import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellerOfferActionResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellerOfferListResponse
 import com.example.myapplication.ui.feature.sell_land.model.SubmitResponse
+import com.example.myapplication.ui.feature.ratings.RatingCreateRequest
+import com.example.myapplication.ui.feature.ratings.RatingResponse
+import com.example.myapplication.ui.feature.ratings.RatingSummaryResponse
+import com.example.myapplication.ui.feature.ratings.RatingListItemResponse
+import com.example.myapplication.ui.feature.transactions.data.remote.TransactionsResponse
+import com.example.myapplication.notification.NotificationListResponseDto
+import com.example.myapplication.notification.NotificationReadRequestDto
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -35,6 +46,9 @@ interface ApiService {
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body body: VerifyOtpRequest): Response<StatusResponse>
+
+    @POST("auth/firebase/verify")
+    suspend fun verifyFirebaseToken(@Body body: FirebaseTokenRequest): Response<StatusResponse>
 
     @POST("auth/signup")
     suspend fun signup(@Body body: SignupRequest): Response<StatusResponse>
@@ -57,11 +71,22 @@ interface ApiService {
     @PUT("users/me/profile")
     suspend fun updateMyProfile(@Body body: UpdateProfileRequest): Response<UserProfileResponse>
 
+    @GET("settings/social-links")
+    suspend fun getSocialLinks(): Response<SocialLinksResponse>
+
+    @GET("settings/banners")
+    suspend fun getBanners(): Response<List<BannerResponse>>
+
     @Multipart
     @POST("users/me/profile-photo")
     suspend fun uploadProfilePhoto(
         @Part file: MultipartBody.Part
     ): Response<ProfilePhotoResponse>
+
+    @POST("users/me/fcm-token")
+    suspend fun registerFcmToken(
+        @Body body: FcmTokenRequest
+    ): Response<StatusResponse>
 
     @POST("sell-land/draft")
     suspend fun saveDraft(
@@ -107,6 +132,16 @@ interface ApiService {
     @POST("sell-land/payments/mark-paid")
     suspend fun markPaid(@Body body: PaymentMarkPaidRequest): Response<PaymentResponse>
 
+    @POST("sell-land/payments/razorpay-order")
+    suspend fun createSellLandRazorpayOrder(
+        @Body body: SellLandRazorpayOrderRequest
+    ): Response<SellLandRazorpayOrderResponse>
+
+    @POST("sell-land/payments/razorpay-verify")
+    suspend fun verifySellLandRazorpayPayment(
+        @Body body: SellLandRazorpayVerifyRequest
+    ): Response<SellLandRazorpayVerifyResponse>
+
     @POST("sell-land/{id}/submit")
     suspend fun submit(@Path("id") id: Int): Response<SubmitResponse>
 
@@ -151,4 +186,52 @@ interface ApiService {
     suspend fun getDocumentRequirements(
         @Query("ownership_type") ownershipType: String? = null
     ): Response<List<DocumentRequirementsResponse>>
+
+    @POST("ratings")
+    suspend fun submitRating(
+        @Body body: RatingCreateRequest
+    ): Response<RatingResponse>
+
+    @GET("ratings/me")
+    suspend fun getMyRating(
+        @Query("property_id") propertyId: Int,
+        @Query("role") role: String
+    ): Response<RatingResponse>
+
+    @GET("ratings/me/summary")
+    suspend fun getMyRatingSummary(): Response<RatingSummaryResponse>
+
+    @GET("ratings/me/list")
+    suspend fun getMyRatingsList(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 50
+    ): Response<List<RatingListItemResponse>>
+
+    @GET("ratings/admin/list")
+    suspend fun getAdminRatingsList(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 50,
+        @Query("property_id") propertyId: Int? = null,
+        @Query("role") role: String? = null,
+        @Query("min_rating") minRating: Int? = null
+    ): Response<List<RatingListItemResponse>>
+
+    @GET("transactions/me")
+    suspend fun getMyTransactions(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 50
+    ): Response<TransactionsResponse>
+
+    @GET("transactions/{transactionId}")
+    suspend fun getTransactionDetail(
+        @Path("transactionId") transactionId: String
+    ): Response<com.example.myapplication.ui.feature.transactions.data.remote.TransactionDto>
+
+    @GET("notifications")
+    suspend fun listNotifications(): Response<NotificationListResponseDto>
+
+    @POST("notifications/read")
+    suspend fun markNotificationsRead(
+        @Body body: NotificationReadRequestDto
+    ): Response<NotificationListResponseDto>
 }

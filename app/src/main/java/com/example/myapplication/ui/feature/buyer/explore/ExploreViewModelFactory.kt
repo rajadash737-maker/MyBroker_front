@@ -2,12 +2,14 @@ package com.example.myapplication.ui.feature.buyer.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.myapplication.network.ConnectivityObserver
 import com.example.myapplication.ui.feature.buyer.domain.repository.LandRepository
 import com.example.myapplication.ui.feature.buyer.domain.repository.WishlistRepository
 
 class ExploreViewModelFactory(
     private val landRepository: LandRepository,
     private val wishlistRepository: WishlistRepository,
+    private val connectivityObserver: ConnectivityObserver,
     private val showWishlistOnly: Boolean = false // NEW
 ) : ViewModelProvider.Factory {
 
@@ -17,6 +19,7 @@ class ExploreViewModelFactory(
             return ExploreViewModel(
                 landRepository = landRepository,
                 wishlistRepository = wishlistRepository,
+                connectivityObserver = connectivityObserver,
                 showWishlistOnly = showWishlistOnly // NEW
             ) as T
         }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "556910266961",
+    "project_id": "mybroker-ecb20",
+    "storage_bucket": "mybroker-ecb20.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:556910266961:android:f4d8cbbb8ea0bbcf120670",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATVE9puuhLRjbS5MYKsr52P1TbWwMqtT0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

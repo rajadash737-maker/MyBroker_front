@@ -30,6 +30,7 @@ fun SellStatusStepper(
         ListingStatus.APPROVED,
         ListingStatus.FIELD_VERIFIED,
         ListingStatus.LIVE,
+        ListingStatus.BOOKED,
         ListingStatus.SOLD
     )
 
@@ -38,6 +39,8 @@ fun SellStatusStepper(
             statusBeforeCancellation ?: ListingStatus.LIVE
         ListingStatus.NEEDS_CORRECTION ->
             ListingStatus.UNDER_REVIEW
+        ListingStatus.SOLD ->
+            ListingStatus.SOLD
         else -> status
     }
 

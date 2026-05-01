@@ -72,13 +72,28 @@ data class SellLandModel(
     val title: String,
     val price: Double,
     val status: ListingStatus = ListingStatus.DRAFT,
+    val canCancelListing: Boolean = false,
+    val paymentStatus: String? = null,
     val statusBeforeCancellation: ListingStatus? = null,
     val rejectionReason: String? = null,
     val offerCount: Int = 0,
     val likesCount: Int = 0,
     val images: List<String> = emptyList(),
-    val profileImageUrl: String? = null
+    val profileImageUrl: String? = null,
+    val dealAmount: Double? = null,
+    val bookingStatus: String? = null,
+    val registryDate: String? = null,
+    val registryTime: String? = null,
+    val registryLocation: String? = null,
+    val registryProofs: List<RegistryProof> = emptyList()
 ) {
     val coverImageUrl: String?
         get() = images.firstOrNull()
 }
+
+data class RegistryProof(
+    val id: Int,
+    val fileUrl: String,
+    val fileName: String,
+    val createdAt: String
+)

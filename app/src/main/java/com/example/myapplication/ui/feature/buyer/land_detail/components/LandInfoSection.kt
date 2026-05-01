@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.feature.buyer.land_detail.LandDetail
+import com.example.myapplication.ui.feature.buyer.utils.formatAreaWithUnit
 import java.text.DecimalFormat
 import java.util.Locale
 
@@ -27,8 +28,9 @@ fun LandInfoSection(land: LandDetail) {
 
         Text("Title: ${land.title}")
         Text("Land Type: ${land.landType.replace('_', ' ').replaceFirstChar { it.uppercase() }}")
+        Text("Category: ${categoryText(land.ownerCategory)}")
         Text("Status: ${statusText(land.statusLabel)}")
-        Text("Area: ${land.area} ${land.areaUnit}")
+        Text("Area: ${formatAreaWithUnit(land.area, land.areaUnit)}")
 
         val district = land.city ?: "-"
         val state = land.state ?: "-"
@@ -48,6 +50,17 @@ private fun statusText(raw: String): String {
         normalized == "temp_lock" || normalized == "locked" || normalized == "lock" -> "Lock"
         normalized == "booked" -> "Booked"
         normalized == "sold" -> "Sold"
+        else -> raw.replace('_', ' ').replaceFirstChar { it.uppercase() }
+    }
+}
+
+private fun categoryText(raw: String?): String {
+    return when (raw?.trim()?.lowercase()) {
+        "general" -> "General"
+        "obc" -> "OBC"
+        "sc" -> "SC"
+        "st" -> "ST"
+        null, "" -> "-"
         else -> raw.replace('_', ' ').replaceFirstChar { it.uppercase() }
     }
 }

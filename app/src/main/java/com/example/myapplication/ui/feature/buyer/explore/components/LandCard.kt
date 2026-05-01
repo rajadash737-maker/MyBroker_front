@@ -40,6 +40,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.myapplication.network.ApiClient
 import com.example.myapplication.ui.feature.buyer.explore.Land
+import com.example.myapplication.ui.feature.buyer.utils.formatAreaWithUnit
 import java.text.DecimalFormat
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -158,7 +159,7 @@ fun LandCard(
                 )
 
                 Text(
-                    text = "${land.area} ${land.areaUnit}",
+                    text = formatAreaWithUnit(land.area, land.areaUnit),
                     style = MaterialTheme.typography.bodyMedium
                 )
 

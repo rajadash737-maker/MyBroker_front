@@ -14,5 +14,7 @@ sealed class ExploreEvent {
 
     object OnRefresh : ExploreEvent()
 
+    object OnRetry : ExploreEvent()
+
     object OnLoadMore : ExploreEvent() // NEW
 }

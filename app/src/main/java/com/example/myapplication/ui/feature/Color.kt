@@ -2,10 +2,19 @@ package com.example.myapplication.ui.feature
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val BrokerBlue = Color(0xFF0E6FFF)
+val BrokerGreen = Color(0xFF10B981)
+val BrokerMint = Color(0xFFE7FFF6)
+val BrokerSky = Color(0xFFEAF4FF)
+val BrokerText = Color(0xFF102A43)
+val BrokerMuted = Color(0xFF6B7C93)
+val BrokerSurface = Color(0xFFFFFFFF)
+val BrokerSurfaceAlt = Color(0xFFF6FAFD)
+val BrokerStroke = Color(0xFFDCE7F2)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val BrokerBlueDark = Color(0xFF79AFFF)
+val BrokerGreenDark = Color(0xFF5EE2B1)
+val BrokerTextDark = Color(0xFFE6F1F8)
+val BrokerMutedDark = Color(0xFF9FB3C8)
+val BrokerSurfaceDark = Color(0xFF0F1720)
+val BrokerSurfaceAltDark = Color(0xFF16212D)

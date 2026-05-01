@@ -47,9 +47,10 @@ fun BottomActionBar(
             ) {
                 OutlinedButton(
                     modifier = Modifier.weight(1f),
+                    enabled = !isOfferLocked,
                     onClick = onBookClick
                 ) {
-                    Text("Book Now")
+                    Text(if (isOfferLocked) "Locked" else "Book Now")
                 }
 
                 Button(

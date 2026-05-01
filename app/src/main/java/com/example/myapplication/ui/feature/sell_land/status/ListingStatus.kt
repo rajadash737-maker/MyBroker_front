@@ -7,6 +7,7 @@ enum class ListingStatus {
     FIELD_VERIFIED,
     LIVE,
     NEEDS_CORRECTION,
+    BOOKED,
     SOLD,
     PROCESSING_REFUND,
     REFUND_SUCCESSFUL

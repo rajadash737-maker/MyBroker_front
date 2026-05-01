@@ -13,6 +13,10 @@ import com.example.myapplication.ui.feature.sell_land.model.DocumentRequirements
 import com.example.myapplication.ui.feature.sell_land.model.PaymentInitRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentMarkPaidRequest
 import com.example.myapplication.ui.feature.sell_land.model.PaymentResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayOrderRequest
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayOrderResponse
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayVerifyRequest
+import com.example.myapplication.ui.feature.sell_land.model.SellLandRazorpayVerifyResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandMediaResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellLandResponse
 import com.example.myapplication.ui.feature.sell_land.model.SellerOfferActionResponse
@@ -86,6 +90,34 @@ class SellLandRemote {
         )
         if (!res.isSuccessful || res.body() == null) {
             throw Exception(res.errorBody()?.string() ?: "Mark paid failed")
+        }
+        res.body()!!
+    }
+
+    suspend fun createRazorpayOrder(requestId: Int): Result<SellLandRazorpayOrderResponse> = runCatching {
+        val res = ApiClient.apiService.createSellLandRazorpayOrder(
+            SellLandRazorpayOrderRequest(requestId = requestId)
+        )
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Order creation failed")
+        }
+        res.body()!!
+    }
+
+    suspend fun verifyRazorpayPayment(
+        orderId: String,
+        paymentId: String,
+        signature: String
+    ): Result<SellLandRazorpayVerifyResponse> = runCatching {
+        val res = ApiClient.apiService.verifySellLandRazorpayPayment(
+            SellLandRazorpayVerifyRequest(
+                orderId = orderId,
+                paymentId = paymentId,
+                signature = signature
+            )
+        )
+        if (!res.isSuccessful || res.body() == null) {
+            throw Exception(res.errorBody()?.string() ?: "Payment verification failed")
         }
         res.body()!!
     }

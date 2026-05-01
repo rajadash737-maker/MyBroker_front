@@ -19,7 +19,10 @@ data class BuyerOffer(
     val canAcceptCounter: Boolean,
     val canRejectCounter: Boolean,
     val timeline: List<BuyerOfferTimelineEvent>,
-    val land: BuyerOfferLand
+    val land: BuyerOfferLand,
+    val registryDate: String? = null,
+    val registryTime: String? = null,
+    val registryLocation: String? = null
 )
 
 data class BuyerOfferTimelineEvent(
@@ -35,6 +38,7 @@ data class BuyerOfferLand(
     val location: String?,
     val city: String?,
     val state: String?,
+    val pincode: String?,
     val expectedPrice: Double?
 )
 

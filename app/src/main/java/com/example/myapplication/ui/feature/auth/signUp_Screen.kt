@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.feature.auth
 //package com.example.myapplication.ui
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,46 +25,43 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.myapplication.R
 import com.example.myapplication.network.ApiClient
-import com.example.myapplication.network.SendOtpRequest
 import com.example.myapplication.network.SignupRequest
-import com.example.myapplication.network.VerifyOtpRequest
 //import com.google.firebase.appdistribution.gradle.ApiService
+import com.example.myapplication.utils.normalizeMobile
 import kotlinx.coroutines.launch
-
-fun normalizeMobile(input: String): String {
-    val v = input.trim().removePrefix("+")
-    return if (v.length == 10 && v.all { it.isDigit() }) "91$v" else v
-}
 
 @Composable
 fun SignupScreenWithOtpUI(navController: NavController) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val activity = context as? Activity
 
     // User fields
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var mobile by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
-    // States
-    var otpSent by remember { mutableStateOf(false) }
-    var otpVerified by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
+    val otpViewModel: FirebaseOtpViewModel = viewModel()
+    val otpState by otpViewModel.uiState.collectAsState()
 
-    //val api = remember { ApiClient.retrofit.create(ApiService::class.java) }
+    var signupLoading by remember { mutableStateOf(false) }
+
     val api = remember(context) {
         ApiClient.init(context.applicationContext)
         ApiClient.apiService
     }
 
-
+    LaunchedEffect(otpState.message) {
+        val msg = otpState.message ?: return@LaunchedEffect
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        otpViewModel.clearMessage()
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -145,8 +143,8 @@ fun SignupScreenWithOtpUI(navController: NavController) {
                 ) {
 
                     OutlinedTextField(
-                        value = mobile,
-                        onValueChange = { mobile = it.filter { it.isDigit() } },
+                        value = otpState.mobile,
+                        onValueChange = { otpViewModel.updateMobile(it.filter { ch -> ch.isDigit() }) },
                         label = { Text("Mobile No", color = Color.White) },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -162,58 +160,18 @@ fun SignupScreenWithOtpUI(navController: NavController) {
 
                     Button(
                         onClick = {
-                            if (mobile.length != 10) {
-                                Toast.makeText(context, "Enter valid 10-digit mobile", Toast.LENGTH_SHORT).show()
+                            if (activity == null) {
+                                Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-
-                            scope.launch {
-                                loading = true
-                                try {
-                                    val mobileNorm = normalizeMobile(mobile)
-                                    val res = api.sendOtp(
-                                        SendOtpRequest(
-                                            mobile = mobileNorm,
-                                            purpose = "signup"
-                                        )
-                                    )
-
-                                    val okBody = res.body()
-                                    val errBody = res.errorBody()?.string()
-
-                                    android.util.Log.e(
-                                        "OTP_DEBUG",
-                                        "code=${res.code()} isSuccessful=${res.isSuccessful} body=$okBody err=$errBody mobile=$mobileNorm"
-                                    )
-
-                                    if (res.isSuccessful && okBody?.status == "OTP sent") {
-                                        mobile = mobileNorm
-                                        otpSent = true
-                                        Toast.makeText(context, "OTP Sent!", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            "OTP failed: code=${res.code()} msg=${okBody?.status ?: errBody ?: "unknown"}",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("OTP_DEBUG", "exception", e)
-                                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                                } finally {
-                                    loading = false
-                                }
-                            }
-
-
-
+                            otpViewModel.sendOtp(activity, "signup")
                         },
-                        enabled = !loading,
+                        enabled = !otpState.loading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White.copy(alpha = 0.4f)
                         )
                     ) {
-                        Text("Send OTP", color = Color.Black)
+                        Text(if (otpState.loading) "Please wait..." else "Send OTP", color = Color.Black)
                     }
                 }
 
@@ -226,9 +184,9 @@ fun SignupScreenWithOtpUI(navController: NavController) {
                 ) {
 
                     OutlinedTextField(
-                        value = otp,
-                        onValueChange = { otp = it.filter { it.isDigit() } },
-                        enabled = otpSent && !otpVerified,
+                        value = otpState.otp,
+                        onValueChange = { otpViewModel.updateOtp(it.filter { ch -> ch.isDigit() }) },
+                        enabled = otpState.otpSent && !otpState.otpVerified,
                         label = { Text("Enter OTP", color = Color.White) },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -246,45 +204,41 @@ fun SignupScreenWithOtpUI(navController: NavController) {
 
                     Button(
                         onClick = {
-                            if (otp.length < 4) {
-                                Toast.makeText(context, "Enter valid OTP", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-
-                            scope.launch {
-                                loading = true
-                                try {
-                                    val res = api.verifyOtp(
-                                        VerifyOtpRequest(
-                                            mobile = normalizeMobile(mobile),
-                                            otp = otp.trim(),
-                                            purpose = "signup"
-                                        )
-                                    )
-                                    val status = res.body()?.status
-
-                                    if (res.isSuccessful && status == "OTP verified") {
-                                        otpVerified = true
-                                        Toast.makeText(context, "OTP Verified!", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, status ?: "Invalid OTP!", Toast.LENGTH_SHORT).show()
-                                    }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                                } finally {
-                                    loading = false
-                                }
-                            }
-
+                            otpViewModel.verifyOtp("signup")
                         },
-                        enabled = otpSent && !otpVerified && !loading,
+                        enabled = otpState.otpSent && !otpState.otpVerified && !otpState.loading,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.4f))
                     ) {
-                        Text(if (otpVerified) "Verified" else "Verify", color = Color.Black)
+                        val label = when {
+                            otpState.loading -> "Please wait..."
+                            otpState.otpVerified -> "Verified"
+                            else -> "Verify"
+                        }
+                        Text(label, color = Color.Black)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+
+                if (otpState.otpSent && !otpState.otpVerified) {
+                    TextButton(
+                        onClick = {
+                            if (activity == null) {
+                                Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
+                                return@TextButton
+                            }
+                            otpViewModel.resendOtp(activity, "signup")
+                        },
+                        enabled = otpState.canResend && !otpState.loading
+                    ) {
+                        val label = if (otpState.canResend) {
+                            "Resend OTP"
+                        } else {
+                            "Resend in ${otpState.resendSeconds}s"
+                        }
+                        Text(label, color = Color.White)
+                    }
+                }
 
                 // Password
 
@@ -350,14 +304,14 @@ fun SignupScreenWithOtpUI(navController: NavController) {
                 Button(
                     onClick = {
 
-                        if (fullname.isEmpty() || email.isEmpty() || mobile.isEmpty() ||
-                            otp.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()
+                        if (fullname.isEmpty() || email.isEmpty() || otpState.mobile.isEmpty() ||
+                            otpState.otp.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()
                         ) {
                             Toast.makeText(context, "Please fill all details", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
 
-                        if (!otpVerified) {
+                        if (!otpState.otpVerified) {
                             Toast.makeText(context, "Verify OTP first!", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
@@ -368,13 +322,13 @@ fun SignupScreenWithOtpUI(navController: NavController) {
                         }
 
                         scope.launch {
-                            loading = true
+                            signupLoading = true
                             try {
                                 val res = api.signup(
                                     SignupRequest(
                                         fullname = fullname.trim(),
                                         email = email.trim(),
-                                        mobile = normalizeMobile(mobile),
+                                        mobile = normalizeMobile(otpState.mobile),
                                         password = password,
                                         confirm = confirmPassword
                                     )
@@ -402,13 +356,14 @@ fun SignupScreenWithOtpUI(navController: NavController) {
                                 android.util.Log.e("SIGNUP_DEBUG", "exception", e)
                                 Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                             } finally {
-                                loading = false
+                                signupLoading = false
                             }
                         }
 
 
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !signupLoading,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.4f))
                 ) {
                     Text("Sign Up", fontSize = 18.sp, color = Color.Black)

@@ -9,9 +9,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.R
 
 data class HomeLandItem(
     val id: Int,
@@ -37,13 +39,13 @@ fun PropertyList(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Nearby Lands for Sale",
+                text = stringResource(id = R.string.home_nearby_lands),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = "View More",
+                text = stringResource(id = R.string.common_view_more),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp,
                 modifier = Modifier.clickable { onViewMoreClick() }

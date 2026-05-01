@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.feature.sell_land.model
 
+import com.example.myapplication.network.ApiClient
 import com.example.myapplication.ui.feature.sell_land.status.StatusMapper
 
 fun SellLandResponse.toSellLandModel(): SellLandModel {
@@ -22,11 +23,27 @@ fun SellLandResponse.toSellLandModel(): SellLandModel {
         title = title ?: "Untitled Land",
         price = expectedPrice ?: 0.0,
         status = mappedStatus,
+        canCancelListing = canCancelListing,
+        paymentStatus = paymentStatus,
         statusBeforeCancellation = mappedStatusBeforeCancellation,
         offerCount = offerCount,
         likesCount = likesCount,
         rejectionReason = tracking?.correctionReason ?: rejectionReason ?: fieldOfficerRejectionReason,
         images = images.orEmpty().filter { it.isNotBlank() },
-        profileImageUrl = profileImageUrl
+        profileImageUrl = profileImageUrl,
+        dealAmount = dealAmount,
+        bookingStatus = bookingStatus?.trim()?.lowercase(),
+        registryDate = registryDate,
+        registryTime = registryTime,
+        registryLocation = registryLocation,
+        registryProofs = registryProofs.map { proof ->
+            val normalized = ApiClient.absoluteUrl(proof.fileUrl) ?: proof.fileUrl
+            RegistryProof(
+                id = proof.id,
+                fileUrl = normalized,
+                fileName = proof.fileName,
+                createdAt = proof.createdAt
+            )
+        }
     )
 }

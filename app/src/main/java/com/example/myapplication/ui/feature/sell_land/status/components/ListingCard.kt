@@ -45,21 +45,62 @@ private fun normalizeImageUrl(raw: String?): String? {
     return ApiClient.absoluteUrl(raw.trim().replace("\\", "/"))
 }
 
+private fun formatInrAmount(amount: Double): String {
+    val formatter = NumberFormat.getNumberInstance(Locale("en", "IN"))
+    return "Rs ${formatter.format(amount)}"
+}
+
 @Composable
 fun ListingCard(
     listing: SellLandModel,
     onEdit: () -> Unit = {},
     onCancel: () -> Unit = {},
-    onViewOffers: () -> Unit = {}
+    onViewOffers: () -> Unit = {},
+    onViewMore: () -> Unit = {}
 ) {
-    val canCancel = listing.status !in setOf(
-        ListingStatus.SOLD,
-        ListingStatus.PROCESSING_REFUND,
-        ListingStatus.REFUND_SUCCESSFUL
-    )
+    val isPaymentSuccess = listing.paymentStatus.equals("success", ignoreCase = true)
+    val canCancel = listing.canCancelListing &&
+        isPaymentSuccess &&
+        listing.status !in setOf(
+            ListingStatus.DRAFT,
+            ListingStatus.BOOKED,
+            ListingStatus.SOLD,
+            ListingStatus.PROCESSING_REFUND,
+            ListingStatus.REFUND_SUCCESSFUL
+        )
 
     val formattedPrice = NumberFormat.getNumberInstance(Locale("en", "IN")).format(listing.price)
     val coverUrl = remember(listing.images) { normalizeImageUrl(listing.images.firstOrNull()) }
+    val normalizedBooking = listing.bookingStatus?.trim()?.lowercase()
+    val bookingLabel = when (normalizedBooking) {
+        "registry_scheduled" -> "Registry Scheduled"
+        "in_process" -> "In Process"
+        "registry_done" -> "Registry Done"
+        "sold" -> "Sold"
+        "booked" -> "Booked"
+        else -> when (listing.status) {
+            ListingStatus.BOOKED -> "Booked"
+            ListingStatus.SOLD -> "Sold"
+            else -> null
+        }
+    }
+    val bookingBadgeColors = when (normalizedBooking) {
+        "registry_scheduled", "in_process" -> Pair(Color(0xFF1565C0), Color.White)
+        "registry_done", "sold" -> Pair(Color(0xFF2E7D32), Color.White)
+        "booked" -> Pair(Color(0xFF1565C0), Color.White)
+        else -> when (listing.status) {
+            ListingStatus.BOOKED -> Pair(Color(0xFF1565C0), Color.White)
+            ListingStatus.SOLD -> Pair(Color(0xFF2E7D32), Color.White)
+            else -> null
+        }
+    }
+    val showViewMore = listing.status in setOf(ListingStatus.BOOKED, ListingStatus.SOLD) || normalizedBooking in setOf(
+        "booked",
+        "registry_scheduled",
+        "in_process",
+        "registry_done",
+        "sold"
+    )
 
     Card(
         modifier = Modifier
@@ -115,12 +156,22 @@ fun ListingCard(
                 Column {
                     Text(text = listing.title, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        text = "₹ $formattedPrice",
+                        text = "Listing ID: ${listing.id}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "Rs $formattedPrice",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                StatusBadge(status = listing.status)
+                StatusBadge(
+                    status = listing.status,
+                    labelOverride = bookingLabel?.uppercase(),
+                    backgroundOverride = bookingBadgeColors?.first,
+                    contentOverride = bookingBadgeColors?.second
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -168,7 +219,44 @@ fun ListingCard(
                 ListingStatus.UNDER_REVIEW -> OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Text("Under Review") }
                 ListingStatus.APPROVED -> OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Text("Waiting For Field Verification") }
                 ListingStatus.FIELD_VERIFIED -> OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Text("Waiting For Final Admin Approval") }
-                ListingStatus.SOLD -> Text("Sold Successfully", color = Color(0xFF2E7D32), style = MaterialTheme.typography.bodyMedium)
+                ListingStatus.BOOKED -> {
+                    Column {
+                        Text(
+                            bookingLabel?.let { "$it" } ?: "Booked Successfully",
+                            color = Color(0xFF1565C0),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        listing.dealAmount?.let { amount ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Deal Amount: ${formatInrAmount(amount)}",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        if (showViewMore) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = onViewMore, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                                Text("View More")
+                            }
+                        }
+                    }
+                }
+                ListingStatus.SOLD -> {
+                    Column {
+                        Text(
+                            bookingLabel?.let { "$it" } ?: "Sold Successfully",
+                            color = Color(0xFF2E7D32),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (showViewMore) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = onViewMore, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                                Text("View More")
+                            }
+                        }
+                    }
+                }
                 ListingStatus.PROCESSING_REFUND -> {
                     Column {
                         Text("Cancellation Confirmed", color = Color.Red, style = MaterialTheme.typography.bodyMedium)

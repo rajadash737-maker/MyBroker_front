@@ -11,6 +11,7 @@ object StatusMapper {
             "field_verified" -> ListingStatus.FIELD_VERIFIED
             "live" -> ListingStatus.LIVE
             "needs_correction" -> ListingStatus.NEEDS_CORRECTION
+            "booked" -> ListingStatus.BOOKED
             "sold" -> ListingStatus.SOLD
             "processing_refund" -> ListingStatus.PROCESSING_REFUND
             "refund_successful" -> ListingStatus.REFUND_SUCCESSFUL
@@ -24,6 +25,7 @@ object StatusMapper {
         return when (s) {
             "processing_refund" -> ListingStatus.PROCESSING_REFUND
             "refund_successful" -> ListingStatus.REFUND_SUCCESSFUL
+            "booked" -> ListingStatus.BOOKED
             "sold" -> ListingStatus.SOLD
             "live" -> ListingStatus.LIVE
             "field_verified" -> ListingStatus.FIELD_VERIFIED

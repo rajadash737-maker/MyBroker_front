@@ -46,8 +46,12 @@ fun BuyerOfferItemDto.toDomain(): BuyerOffer {
             location = land.location,
             city = land.city,
             state = land.state,
+            pincode = land.pincode,
             expectedPrice = land.expectedPrice
-        )
+        ),
+        registryDate = registryDate,
+        registryTime = registryTime,
+        registryLocation = registryLocation
     )
 }
 

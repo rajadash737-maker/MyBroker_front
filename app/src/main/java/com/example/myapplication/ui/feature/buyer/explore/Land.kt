@@ -2,6 +2,7 @@ package com.example.myapplication.ui.feature.buyer.explore
 
 import java.text.NumberFormat
 import java.util.Locale
+import com.example.myapplication.ui.feature.buyer.utils.formatAreaWithUnit
 
 enum class SortType {
     LATEST,
@@ -44,7 +45,7 @@ data class Land(
         get() = NumberFormat.getCurrencyInstance(Locale("en", "IN")).format(price)
 
     val formattedArea: String
-        get() = "${area.toInt()} $areaUnit"
+        get() = formatAreaWithUnit(area, areaUnit)
 
     val districtOrCity: String
         get() = city?.takeIf { it.isNotBlank() } ?: "N/A"

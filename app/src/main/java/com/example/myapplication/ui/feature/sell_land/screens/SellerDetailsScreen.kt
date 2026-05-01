@@ -19,14 +19,30 @@ private data class SellerTypeOption(
     val value: String
 )
 
+private data class SellerCategoryOption(
+    val label: String,
+    val value: String
+)
+
 private val sellerTypeOptions = listOf(
     SellerTypeOption("Single Owner", "single_owner"),
     SellerTypeOption("Multi Owner", "multi_owner"),
     SellerTypeOption("Inherited Land", "inherited_land")
 )
 
+private val sellerCategoryOptions = listOf(
+    SellerCategoryOption("General", "general"),
+    SellerCategoryOption("OBC", "obc"),
+    SellerCategoryOption("SC", "sc"),
+    SellerCategoryOption("ST", "st")
+)
+
 private fun sellerTypeLabel(value: String): String {
     return sellerTypeOptions.firstOrNull { it.value == value }?.label ?: "Single Owner"
+}
+
+private fun sellerCategoryLabel(value: String): String {
+    return sellerCategoryOptions.firstOrNull { it.value == value }?.label ?: "General"
 }
 
 private fun normalizeSellerType(raw: String?): String {
@@ -46,6 +62,16 @@ private fun normalizeSellerType(raw: String?): String {
     }
 }
 
+private fun normalizeSellerCategory(raw: String?): String {
+    return when (raw?.trim()?.lowercase()) {
+        "general" -> "general"
+        "obc" -> "obc"
+        "sc" -> "sc"
+        "st" -> "st"
+        else -> "general"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDetailsScreen(
@@ -58,12 +84,14 @@ fun SellerDetailsScreen(
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
     var sellerType by remember { mutableStateOf("single_owner") }
+    var sellerCategory by remember { mutableStateOf("general") }
     var showDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(draft.sellerDetails) {
         name = draft.sellerDetails?.name.orEmpty()
         mobile = draft.sellerDetails?.mobile.orEmpty()
         sellerType = normalizeSellerType(draft.sellerDetails?.sellerType)
+        sellerCategory = normalizeSellerCategory(draft.sellerDetails?.sellerCategory)
     }
 
     LaunchedEffect(Unit) {
@@ -80,7 +108,8 @@ fun SellerDetailsScreen(
                         SellerDetails(
                             name = name.trim(),
                             mobile = mobile.trim(),
-                            sellerType = sellerType
+                            sellerType = sellerType,
+                            sellerCategory = sellerCategory
                         )
                     )
                     viewModel.saveDraft(step = 1)
@@ -124,6 +153,11 @@ fun SellerDetailsScreen(
                 onSelected = { sellerType = it }
             )
 
+            SellerCategoryDropdown(
+                selectedValue = sellerCategory,
+                onSelected = { sellerCategory = it }
+            )
+
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
@@ -132,7 +166,8 @@ fun SellerDetailsScreen(
                         SellerDetails(
                             name = name.trim(),
                             mobile = mobile.trim(),
-                            sellerType = sellerType
+                            sellerType = sellerType,
+                            sellerCategory = sellerCategory
                         )
                     )
                     viewModel.saveDraft(step = 1)
@@ -189,6 +224,49 @@ fun SellerTypeDropdown(
             onDismissRequest = { expanded = false }
         ) {
             sellerTypeOptions.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.label) },
+                    onClick = {
+                        onSelected(item.value)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SellerCategoryDropdown(
+    selectedValue: String,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = sellerCategoryLabel(selectedValue),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Category") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(
+                    type = MenuAnchorType.PrimaryEditable,
+                    enabled = true
+                )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            sellerCategoryOptions.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item.label) },
                     onClick = {

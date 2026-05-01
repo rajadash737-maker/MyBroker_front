@@ -14,6 +14,7 @@ class AuthInterceptor(
                 path.contains("/auth/refresh") ||
                 path.contains("/auth/send-otp") ||
                 path.contains("/auth/verify-otp") ||
+                path.contains("/auth/firebase/verify") ||
                 path.contains("/auth/signup") ||
                 path.contains("/auth/reset-password")
 

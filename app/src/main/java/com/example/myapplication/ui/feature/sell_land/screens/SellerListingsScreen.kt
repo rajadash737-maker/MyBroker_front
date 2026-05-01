@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.myapplication.ui.feature.common.NoInternetContent
+import com.example.myapplication.ui.feature.common.rememberIsConnected
 import com.example.myapplication.ui.feature.sell_land.navigation.SellLandRoutes
 import com.example.myapplication.ui.feature.sell_land.status.ListingStatus
 import com.example.myapplication.ui.feature.sell_land.status.components.ListingCard
@@ -31,6 +33,15 @@ fun SellerListingsScreen(
     val listings by viewModel.statusListings.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isConnected by rememberIsConnected()
+
+    if (!isConnected) {
+        NoInternetContent(
+            onRetry = { viewModel.loadStatusListings() },
+            modifier = Modifier.fillMaxSize()
+        )
+        return
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadStatusListings()
@@ -87,14 +98,22 @@ fun SellerListingsScreen(
                             }
                         },
                         onCancel = {
-                            val canNavigateToCancel = listing.status !in setOf(
-                                ListingStatus.SOLD,
-                                ListingStatus.PROCESSING_REFUND,
-                                ListingStatus.REFUND_SUCCESSFUL
-                            )
+                            val isPaymentSuccess = listing.paymentStatus.equals("success", ignoreCase = true)
+                            val canNavigateToCancel = listing.canCancelListing &&
+                                isPaymentSuccess &&
+                                listing.status !in setOf(
+                                    ListingStatus.DRAFT,
+                                    ListingStatus.BOOKED,
+                                    ListingStatus.SOLD,
+                                    ListingStatus.PROCESSING_REFUND,
+                                    ListingStatus.REFUND_SUCCESSFUL
+                                )
                             if (canNavigateToCancel) {
                                 navController.navigate("cancel_reason/${listing.id}")
                             }
+                        },
+                        onViewMore = {
+                            navController.navigate(SellLandRoutes.sellerListingDetailRoute(listing.id))
                         }
                     )
                 }

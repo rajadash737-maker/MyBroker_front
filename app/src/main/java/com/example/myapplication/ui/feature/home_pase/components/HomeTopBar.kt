@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
@@ -28,7 +29,8 @@ fun HomeTopBar(
     onNotificationClick: () -> Unit,
     onLikeClick: () -> Unit,      // NEW
     onLandClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    unreadCount: Int = 0
 ) {
     val context = LocalContext.current
     val api = remember(context) {
@@ -55,11 +57,21 @@ fun HomeTopBar(
         ),
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         title = {
-            Text("MyBroker App", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(stringResource(id = R.string.app_topbar_title), color = Color.White, fontWeight = FontWeight.Bold)
         },
         actions = {
             IconButton(onClick = onNotificationClick) {
-                Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                BadgedBox(
+                    badge = {
+                        if (unreadCount > 0) {
+                            Badge {
+                                Text(if (unreadCount > 99) "99+" else unreadCount.toString())
+                            }
+                        }
+                    }
+                ) {
+                    Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
+                }
             }
 
             IconButton(onClick = onLikeClick) { // NEW like icon

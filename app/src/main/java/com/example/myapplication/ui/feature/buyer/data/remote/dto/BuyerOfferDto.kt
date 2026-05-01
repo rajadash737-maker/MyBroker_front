@@ -42,6 +42,12 @@ data class BuyerOfferItemDto(
     val canAcceptCounter: Boolean,
     @SerializedName("can_reject_counter")
     val canRejectCounter: Boolean,
+    @SerializedName("registry_date")
+    val registryDate: String? = null,
+    @SerializedName("registry_time")
+    val registryTime: String? = null,
+    @SerializedName("registry_location")
+    val registryLocation: String? = null,
     @SerializedName("timeline")
     val timeline: List<BuyerOfferTimelineEventDto>,
     @SerializedName("land")
@@ -70,6 +76,8 @@ data class BuyerOfferLandDto(
     val city: String?,
     @SerializedName("state")
     val state: String?,
+    @SerializedName("pincode")
+    val pincode: String?,
     @SerializedName("expected_price")
     val expectedPrice: Double?
 )
